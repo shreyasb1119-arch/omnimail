@@ -32,8 +32,8 @@ export const Route = createFileRoute("/")({
     meta: [
       { title: "Shreyas Mail — AI-native email" },
       { name: "description", content: "Ultra-sleek Apple-esque Gmail client with AI writer, smart triage, and one-click spam cleanup." },
-      { property: "og:title", content: "Shreyas Mail" },
-      { property: "og:description", content: "AI-native Gmail client. Sleek, fast, keyboard-first." },
+      { property: "og:title", content: "Shreyas Mail — AI-native email" },
+      { property: "og:description", content: "Ultra-sleek Apple-esque Gmail client with AI writer, smart triage, and one-click spam cleanup." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
