@@ -286,7 +286,12 @@ function App() {
     ...FOLDERS.map((f) => ({ id: `go-${f.id}`, label: `Go to ${f.label}`, icon: <f.icon className="h-4 w-4" />, action: () => { setFolder(f.id); setActiveQuery(""); setQuery(""); }, group: "Navigate" })),
   ], [load]);
 
-  if (!session) return <SignInScreen onOpenSettings={() => setSettingsOpen(true)} />;
+  if (!session) return (
+    <>
+      <SignInScreen onOpenSettings={() => setSettingsOpen(true)} />
+      <SettingsDrawer open={settingsOpen} onOpenChange={setSettingsOpen} />
+    </>
+  );
 
   return (
     <div className="relative flex h-screen overflow-hidden text-foreground">
