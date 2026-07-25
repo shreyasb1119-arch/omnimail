@@ -8,32 +8,40 @@ import { Input } from "@/components/ui/input";
 import {
   Inbox, Star, Send, Trash2, PenSquare, Sparkles, Settings, Archive,
   Search, Mail, ShieldAlert, FileText, RefreshCw, Zap, Filter, ArrowLeft,
-  Reply, Loader2, Command as CmdIcon,
+  Reply, Loader2, Command as CmdIcon, Info, Folder, Plus, MessageSquare, X,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   batchDelete, batchModify, deleteMessage, emptyTrash,
   listMessages, batchGetMessages, modifyMessage, trashMessage,
-  type ParsedMessage,
+  listLabels, createLabel, type GmailLabel, type ParsedMessage,
 } from "@/lib/gmail";
 import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
 import { useSession, useSettings, sessionStore, getAiLabels, setAiLabel, type AiLabel } from "@/lib/store";
 import { aiTriage } from "@/lib/ai";
+import type { AssistantAction } from "@/lib/ai";
 import { ThemeApplier } from "@/components/mail/ThemeApplier";
 import { SettingsDrawer } from "@/components/mail/SettingsDrawer";
 import { Compose, type ComposeInitial } from "@/components/mail/Compose";
 import { CommandPalette, type Cmd } from "@/components/mail/CommandPalette";
+import { AiAssistant } from "@/components/mail/AiAssistant";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Shreyas Mail — AI-native email" },
-      { name: "description", content: "Ultra-sleek Apple-esque Gmail client with AI writer, smart triage, and one-click spam cleanup." },
+      { name: "description", content: "Ultra-sleek Apple-esque Gmail client with AI writer, smart triage, folders, and a chat assistant that acts on your inbox." },
       { property: "og:title", content: "Shreyas Mail — AI-native email" },
-      { property: "og:description", content: "Ultra-sleek Apple-esque Gmail client with AI writer, smart triage, and one-click spam cleanup." },
+      { property: "og:description", content: "Ultra-sleek Apple-esque Gmail client with AI writer, smart triage, folders, and a chat assistant that acts on your inbox." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -41,8 +49,8 @@ export const Route = createFileRoute("/")({
   component: App,
 });
 
-type Folder = "INBOX" | "STARRED" | "SENT" | "DRAFT" | "SPAM" | "TRASH";
-const FOLDERS: { id: Folder; label: string; icon: any }[] = [
+type Folder = string; // system label id or user label id
+const SYSTEM_FOLDERS: { id: string; label: string; icon: any }[] = [
   { id: "INBOX", label: "Inbox", icon: Inbox },
   { id: "STARRED", label: "Starred", icon: Star },
   { id: "SENT", label: "Sent", icon: Send },
@@ -71,6 +79,26 @@ function labelBadge(l?: AiLabel) {
   return <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${m.cls}`}>{m.text}</span>;
 }
 
+// Transform user queries: dates like 10/26/25 or 2025-10-26 → Gmail `before:` search.
+function transformQuery(raw: string): string {
+  const q = raw.trim();
+  if (!q) return "";
+  // MM/DD/YY or MM/DD/YYYY
+  const slash = q.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (slash) {
+    let [_, mm, dd, yy] = slash;
+    const year = yy.length === 2 ? `20${yy}` : yy;
+    return `before:${year}/${mm.padStart(2, "0")}/${dd.padStart(2, "0")}`;
+  }
+  // YYYY-MM-DD
+  const iso = q.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) {
+    const [_, y, m, d] = iso;
+    return `before:${y}/${m.padStart(2, "0")}/${d.padStart(2, "0")}`;
+  }
+  return q;
+}
+
 function App() {
   const session = useSession();
   const settings = useSettings();
@@ -82,17 +110,20 @@ function App() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openId, setOpenId] = useState<string | null>(null);
   const [aiLabels, setAiLabels] = useState<Record<string, AiLabel>>({});
+  const [userLabels, setUserLabels] = useState<GmailLabel[]>([]);
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeInitial, setComposeInitial] = useState<ComposeInitial | undefined>();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [newFolderOpen, setNewFolderOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
   const [triaging, setTriaging] = useState(false);
   const [purging, setPurging] = useState(false);
   const [confirmEmpty, setConfirmEmpty] = useState(false);
   const [cursorIndex, setCursorIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Silent restore on load
   useEffect(() => {
     (async () => {
       if (session) return;
@@ -105,8 +136,17 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.clientId]);
 
-  // Load AI label cache
   useEffect(() => setAiLabels(getAiLabels()), []);
+
+  const refreshLabels = useCallback(async () => {
+    if (!session) return;
+    try {
+      const all = await listLabels();
+      setUserLabels(all.filter((l) => l.type === "user"));
+    } catch {}
+  }, [session]);
+
+  useEffect(() => { refreshLabels(); }, [refreshLabels]);
 
   const load = useCallback(async () => {
     if (!session) return;
@@ -132,9 +172,11 @@ function App() {
     }
   }, [session, folder, activeQuery]);
 
-  useEffect(() => {
-    if (session) load();
-  }, [session, folder, activeQuery, load]);
+  useEffect(() => { if (session) load(); }, [session, folder, activeQuery, load]);
+
+  const runSearch = () => {
+    setActiveQuery(transformQuery(query));
+  };
 
   const openMessage = useCallback(
     async (id: string) => {
@@ -155,8 +197,7 @@ function App() {
     try {
       await batchModify(ids, [], ["INBOX"]);
       setMessages((p) => p.filter((m) => !ids.includes(m.id)));
-      setSelected(new Set());
-      setOpenId(null);
+      setSelected(new Set()); setOpenId(null);
       toast.success(`Archived ${ids.length}`);
     } catch (e: any) { toast.error(e.message); }
   };
@@ -165,8 +206,7 @@ function App() {
     try {
       await Promise.all(ids.map((id) => trashMessage(id)));
       setMessages((p) => p.filter((m) => !ids.includes(m.id)));
-      setSelected(new Set());
-      setOpenId(null);
+      setSelected(new Set()); setOpenId(null);
       toast.success(`Moved to Trash: ${ids.length}`);
     } catch (e: any) { toast.error(e.message); }
   };
@@ -182,8 +222,7 @@ function App() {
       try { await batchDelete(ids); }
       catch { await Promise.all(ids.map((id) => deleteMessage(id).catch(() => null))); }
       setMessages((p) => p.filter((m) => !ids.includes(m.id)));
-      setSelected(new Set());
-      setOpenId(null);
+      setSelected(new Set()); setOpenId(null);
       toast.success(`Deleted ${ids.length}`);
     } catch (e: any) { toast.error(e.message); }
   };
@@ -213,9 +252,7 @@ function App() {
       }
       setAiLabels(out);
       toast.success("Triage complete");
-    } finally {
-      setTriaging(false);
-    }
+    } finally { setTriaging(false); }
   };
 
   const runAutoPurge = async () => {
@@ -245,9 +282,67 @@ function App() {
       } else {
         toast.info("Nothing to purge");
       }
-    } finally {
-      setPurging(false);
+    } finally { setPurging(false); }
+  };
+
+  const executeAssistantActions = async (actions: AssistantAction[]) => {
+    let ok = 0, failed = 0;
+    const summary: string[] = [];
+    const knownIds = new Set(messages.map((m) => m.id));
+
+    for (const a of actions) {
+      try {
+        if ("ids" in a) {
+          const ids = a.ids.filter((id) => knownIds.has(id));
+          if (!ids.length) continue;
+          switch (a.type) {
+            case "star":
+              await Promise.all(ids.map((id) => modifyMessage(id, ["STARRED"], [])));
+              setMessages((p) => p.map((m) => ids.includes(m.id) ? { ...m, starred: true } : m));
+              ok += ids.length; summary.push(`Starred ${ids.length}`); break;
+            case "unstar":
+              await Promise.all(ids.map((id) => modifyMessage(id, [], ["STARRED"])));
+              setMessages((p) => p.map((m) => ids.includes(m.id) ? { ...m, starred: false } : m));
+              ok += ids.length; summary.push(`Unstarred ${ids.length}`); break;
+            case "archive":
+              await batchModify(ids, [], ["INBOX"]);
+              setMessages((p) => p.filter((m) => !ids.includes(m.id)));
+              ok += ids.length; summary.push(`Archived ${ids.length}`); break;
+            case "trash":
+              await Promise.all(ids.map((id) => trashMessage(id)));
+              setMessages((p) => p.filter((m) => !ids.includes(m.id)));
+              ok += ids.length; summary.push(`Trashed ${ids.length}`); break;
+            case "markRead":
+              await batchModify(ids, [], ["UNREAD"]);
+              setMessages((p) => p.map((m) => ids.includes(m.id) ? { ...m, unread: false } : m));
+              ok += ids.length; summary.push(`Marked ${ids.length} read`); break;
+            case "markUnread":
+              await batchModify(ids, ["UNREAD"], []);
+              setMessages((p) => p.map((m) => ids.includes(m.id) ? { ...m, unread: true } : m));
+              ok += ids.length; summary.push(`Marked ${ids.length} unread`); break;
+            case "label": {
+              let lbl = userLabels.find((l) => l.name.toLowerCase() === a.labelName.toLowerCase());
+              if (!lbl) { lbl = await createLabel(a.labelName); await refreshLabels(); }
+              await batchModify(ids, [lbl.id], []);
+              ok += ids.length; summary.push(`Labeled ${ids.length} "${a.labelName}"`); break;
+            }
+          }
+        } else if (a.type === "search") {
+          setQuery(a.query); setActiveQuery(a.query);
+          ok++; summary.push(`Searched: ${a.query}`);
+        } else if (a.type === "compose") {
+          setComposeInitial({ to: a.to, subject: a.subject, body: a.body });
+          setComposeOpen(true);
+          ok++; summary.push(`Opened compose to ${a.to}`);
+        }
+      } catch (e: any) {
+        failed++; summary.push(`✗ ${a.type} failed`);
+      }
     }
+    return {
+      ok, failed,
+      summary: summary.length ? `✓ ${summary.join(" · ")}` : "Nothing to do.",
+    };
   };
 
   // Keyboard shortcuts
@@ -255,11 +350,7 @@ function App() {
     const h = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       const inField = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setCmdOpen(true);
-        return;
-      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setCmdOpen(true); return; }
       if (inField) return;
       const cur = messages[cursorIndex];
       if (e.key === "j") { e.preventDefault(); setCursorIndex((i) => Math.min(messages.length - 1, i + 1)); }
@@ -280,10 +371,12 @@ function App() {
   const commands: Cmd[] = useMemo(() => [
     { id: "compose", label: "Compose", icon: <PenSquare className="h-4 w-4" />, shortcut: "C", action: () => { setComposeInitial(undefined); setComposeOpen(true); }, group: "Actions" },
     { id: "refresh", label: "Refresh", icon: <RefreshCw className="h-4 w-4" />, shortcut: "R", action: load, group: "Actions" },
+    { id: "assistant", label: "Open AI Assistant", icon: <MessageSquare className="h-4 w-4" />, action: () => setAssistantOpen(true), group: "AI" },
     { id: "triage", label: "AI Smart Triage", icon: <Sparkles className="h-4 w-4" />, action: runTriage, group: "AI" },
     { id: "purge", label: "AI Auto-Purge Spam", icon: <Zap className="h-4 w-4" />, action: runAutoPurge, group: "AI" },
+    { id: "newfolder", label: "New folder…", icon: <Plus className="h-4 w-4" />, action: () => setNewFolderOpen(true), group: "Actions" },
     { id: "settings", label: "Open Settings", icon: <Settings className="h-4 w-4" />, action: () => setSettingsOpen(true), group: "Actions" },
-    ...FOLDERS.map((f) => ({ id: `go-${f.id}`, label: `Go to ${f.label}`, icon: <f.icon className="h-4 w-4" />, action: () => { setFolder(f.id); setActiveQuery(""); setQuery(""); }, group: "Navigate" })),
+    ...SYSTEM_FOLDERS.map((f) => ({ id: `go-${f.id}`, label: `Go to ${f.label}`, icon: <f.icon className="h-4 w-4" />, action: () => { setFolder(f.id); setActiveQuery(""); setQuery(""); }, group: "Navigate" })),
   ], [load]);
 
   if (!session) return (
@@ -294,218 +387,295 @@ function App() {
   );
 
   return (
-    <div className="relative flex h-screen overflow-hidden text-foreground">
+    <TooltipProvider delayDuration={200}>
       <ThemeApplier />
       <Toaster position="top-right" richColors />
-
-      {/* Sidebar */}
-      <aside className="glass flex w-64 shrink-0 flex-col border-r border-border/50 px-3 py-4">
-        <div className="mb-5 flex items-center gap-2 px-2">
-          <div className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground shadow-md">
-            <Mail className="h-4 w-4" />
-          </div>
-          <div>
-            <div className="text-sm font-semibold tracking-tight">Shreyas Mail</div>
-            <div className="text-[10px] text-muted-foreground">{session.profile.email}</div>
-          </div>
-        </div>
-        <Button
-          onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
-          className="mb-3 justify-start gap-2 rounded-xl"
-        >
-          <PenSquare className="h-4 w-4" /> Compose
-        </Button>
-        <nav className="space-y-0.5">
-          {FOLDERS.map((f) => (
-            <button
-              key={f.id}
-              onClick={() => { setFolder(f.id); setActiveQuery(""); setQuery(""); }}
-              className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition ${
-                folder === f.id && !activeQuery ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-              }`}
-            >
-              <f.icon className="h-4 w-4" /> {f.label}
-            </button>
-          ))}
-        </nav>
-        <div className="mt-6 space-y-2 rounded-xl border border-border/60 bg-card/40 p-3">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5" /> AI
-          </div>
-          <Button variant="secondary" size="sm" className="w-full justify-start gap-2" onClick={runTriage} disabled={triaging}>
-            {triaging ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Filter className="h-3.5 w-3.5" />} Smart Triage
-          </Button>
-          <Button variant="secondary" size="sm" className="w-full justify-start gap-2" onClick={runAutoPurge} disabled={purging}>
-            {purging ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />} Auto-Purge
-          </Button>
-        </div>
-        <div className="mt-auto space-y-2">
-          <button onClick={() => setCmdOpen(true)} className="flex w-full items-center gap-2 rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-xs text-muted-foreground transition hover:text-foreground">
-            <CmdIcon className="h-3.5 w-3.5" /> Command palette
-            <span className="ml-auto rounded border border-border px-1.5 font-mono text-[10px]">⌘K</span>
-          </button>
-          <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={() => setSettingsOpen(true)}>
-            <Settings className="h-4 w-4" /> Settings
-          </Button>
-        </div>
-      </aside>
-
-      {/* List pane */}
-      <section className="flex w-[420px] shrink-0 flex-col border-r border-border/50 bg-background/40">
-        <header className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            id="search-input"
-            placeholder="Search mail…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && setActiveQuery(query)}
-            className="h-8 border-0 bg-transparent p-0 focus-visible:ring-0"
-          />
-          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={load}>
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          </Button>
-        </header>
-
-        {/* Bulk / trash bar */}
-        <div className="flex items-center gap-2 border-b border-border/50 px-3 py-2 text-xs">
-          <Checkbox
-            checked={selected.size > 0 && selected.size === messages.length}
-            onCheckedChange={(v) => setSelected(v ? new Set(messages.map((m) => m.id)) : new Set())}
-          />
-          <span className="text-muted-foreground">{selected.size ? `${selected.size} selected` : `${messages.length} messages`}</span>
-          <div className="ml-auto flex items-center gap-1">
-            {selected.size > 0 && (
-              <>
-                <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => doArchive(Array.from(selected))}>
-                  <Archive className="h-3.5 w-3.5" /> Archive
-                </Button>
-                <Button size="sm" variant="ghost" className="h-7 gap-1 text-destructive" onClick={() => doTrash(Array.from(selected))}>
-                  <Trash2 className="h-3.5 w-3.5" /> Trash
-                </Button>
-              </>
-            )}
-            {folder === "TRASH" && (
-              <Button size="sm" variant="destructive" className="h-7 gap-1" onClick={() => setConfirmEmpty(true)} disabled={purging}>
-                {purging ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} Empty Trash Now
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <div ref={listRef} className="flex-1 overflow-y-auto">
-          {loading && !messages.length && (
-            <div className="p-8 text-center text-sm text-muted-foreground">
-              <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" /> Loading…
-            </div>
-          )}
-          {!loading && !messages.length && (
-            <div className="p-10 text-center text-sm text-muted-foreground">Inbox zero. 🎉</div>
-          )}
-          {messages.map((m, i) => {
-            const isOpen = openId === m.id;
-            const isCursor = i === cursorIndex;
-            const isSel = selected.has(m.id);
-            return (
-              <div
-                key={m.id}
-                onClick={() => { setCursorIndex(i); openMessage(m.id); }}
-                className={`animate-in-up group flex cursor-pointer gap-2 border-b border-border/40 px-3 py-3 transition ${
-                  isOpen ? "bg-accent/60" : isCursor ? "bg-accent/30" : "hover:bg-accent/20"
-                }`}
-              >
-                <div className="flex flex-col items-center gap-2 pt-0.5">
-                  <Checkbox
-                    checked={isSel}
-                    onClick={(e) => e.stopPropagation()}
-                    onCheckedChange={(v) => {
-                      setSelected((prev) => {
-                        const n = new Set(prev);
-                        v ? n.add(m.id) : n.delete(m.id);
-                        return n;
-                      });
-                    }}
-                  />
-                  <button onClick={(e) => { e.stopPropagation(); doStar(m.id, !m.starred); }} className="text-muted-foreground hover:text-primary">
-                    <Star className={`h-3.5 w-3.5 ${m.starred ? "fill-primary text-primary" : ""}`} />
-                  </button>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <div className={`truncate text-sm ${m.unread ? "font-semibold" : "font-medium text-muted-foreground"}`}>
-                      {m.from.split("<")[0].replace(/"/g, "").trim() || m.fromEmail}
-                    </div>
-                    {labelBadge(aiLabels[m.id])}
-                    <div className="ml-auto shrink-0 text-[10px] text-muted-foreground">{relTime(m.date)}</div>
-                  </div>
-                  <div className={`mt-0.5 truncate text-sm ${m.unread ? "text-foreground" : "text-muted-foreground"}`}>
-                    {m.subject || "(no subject)"}
-                  </div>
-                  <div className="truncate text-xs text-muted-foreground/80">{m.snippet}</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Reader */}
-      <section className="relative flex-1 overflow-y-auto">
-        {!opened ? (
-          <div className="grid h-full place-items-center p-10 text-center text-muted-foreground">
-            <div>
-              <Mail className="mx-auto mb-3 h-8 w-8 opacity-40" />
-              <div className="text-sm">Select a message to read</div>
-              <div className="mt-1 text-xs opacity-70">j/k to navigate · Enter to open · c to compose · ⌘K for anything</div>
-            </div>
-          </div>
-        ) : (
-          <div className="mx-auto max-w-3xl px-8 py-8">
-            <div className="mb-4 flex items-center gap-2">
-              <Button size="sm" variant="ghost" onClick={() => setOpenId(null)}><ArrowLeft className="h-4 w-4" /></Button>
-              <Button size="sm" variant="ghost" onClick={() => doArchive([opened.id])}><Archive className="h-4 w-4" /> Archive</Button>
-              <Button size="sm" variant="ghost" className="text-destructive" onClick={() => doTrash([opened.id])}><Trash2 className="h-4 w-4" /> Trash</Button>
-              {folder === "TRASH" && (
-                <Button size="sm" variant="destructive" onClick={() => doPermanentDelete([opened.id])}>Delete forever</Button>
-              )}
-              <Button
-                size="sm"
-                variant="secondary"
-                className="ml-auto gap-1"
-                onClick={() => {
-                  setComposeInitial({
-                    to: opened.fromEmail,
-                    subject: opened.subject.startsWith("Re:") ? opened.subject : `Re: ${opened.subject}`,
-                    body: `\n\n\nOn ${new Date(opened.date).toLocaleString()}, ${opened.from} wrote:\n> ${opened.bodyText.split("\n").join("\n> ")}`,
-                    threadId: opened.threadId,
-                  });
-                  setComposeOpen(true);
-                }}
-              >
-                <Reply className="h-4 w-4" /> Reply
-              </Button>
-            </div>
-            <h1 className="text-2xl font-semibold tracking-tight">{opened.subject || "(no subject)"}</h1>
-            <div className="mt-2 flex items-center gap-3 text-sm text-muted-foreground">
-              <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
-                {(opened.from[0] || "?").toUpperCase()}
+      <div className="relative h-screen w-screen overflow-hidden p-3 text-foreground">
+        <div className="flex h-full w-full overflow-hidden rounded-3xl border border-border/60 shadow-2xl">
+          {/* Sidebar */}
+          <aside className="glass flex w-64 shrink-0 flex-col px-3 py-4">
+            <div className="mb-5 flex items-center gap-2 px-2">
+              <div className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground shadow-md">
+                <Mail className="h-4 w-4" />
               </div>
               <div>
-                <div className="text-foreground">{opened.from}</div>
-                <div className="text-xs">to {opened.to} · {new Date(opened.date).toLocaleString()}</div>
+                <div className="text-sm font-semibold tracking-tight">Shreyas Mail</div>
+                <div className="text-[10px] text-muted-foreground">{session.profile.email}</div>
               </div>
-              {labelBadge(aiLabels[opened.id])}
             </div>
-            <div className="mt-6 rounded-2xl border border-border/60 bg-card/40 p-6">
-              {opened.bodyHtml ? (
-                <div className="prose-mail text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: opened.bodyHtml }} />
-              ) : (
-                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{opened.bodyText}</pre>
+            <Button
+              onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
+              className="mb-3 justify-start gap-2 rounded-xl"
+            >
+              <PenSquare className="h-4 w-4" /> Compose
+            </Button>
+            <nav className="space-y-0.5">
+              {SYSTEM_FOLDERS.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => { setFolder(f.id); setActiveQuery(""); setQuery(""); }}
+                  className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition ${
+                    folder === f.id && !activeQuery ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                  }`}
+                >
+                  <f.icon className="h-4 w-4" /> {f.label}
+                </button>
+              ))}
+            </nav>
+
+            {/* Folders (user labels) */}
+            <div className="mt-4">
+              <div className="mb-1 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span>Folders</span>
+                <button
+                  onClick={() => setNewFolderOpen(true)}
+                  className="rounded p-0.5 hover:text-foreground"
+                  title="New folder"
+                >
+                  <Plus className="h-3 w-3" />
+                </button>
+              </div>
+              <div className="max-h-40 space-y-0.5 overflow-y-auto">
+                {userLabels.length === 0 && (
+                  <div className="px-3 py-1 text-[11px] text-muted-foreground/70">No folders yet</div>
+                )}
+                {userLabels.map((l) => (
+                  <button
+                    key={l.id}
+                    onClick={() => { setFolder(l.id); setActiveQuery(""); setQuery(""); }}
+                    className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs transition ${
+                      folder === l.id && !activeQuery ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                    }`}
+                  >
+                    <Folder className="h-3.5 w-3.5" /> <span className="truncate">{l.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2 rounded-xl border border-border/60 bg-card/40 p-3">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5" /> AI
+              </div>
+
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full justify-start gap-2"
+                onClick={() => setAssistantOpen(true)}
+              >
+                <MessageSquare className="h-3.5 w-3.5" /> Chat Assistant
+              </Button>
+
+              <div className="flex items-center gap-1">
+                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runTriage} disabled={triaging}>
+                  {triaging ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Filter className="h-3.5 w-3.5" />} Smart Triage
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-[220px] text-xs">
+                    Scans your first 25 loaded messages and tags each <b>High</b>, <b>Low</b>, or <b>Cold</b> so you can spot what actually needs attention.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runAutoPurge} disabled={purging}>
+                  {purging ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />} Auto-Purge
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-[220px] text-xs">
+                    Uses AI triage to identify cold outreach and promotional junk in view, then moves them to Trash. Nothing is permanently deleted.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+
+            <div className="mt-auto space-y-2">
+              <button onClick={() => setCmdOpen(true)} className="flex w-full items-center gap-2 rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-xs text-muted-foreground transition hover:text-foreground">
+                <CmdIcon className="h-3.5 w-3.5" /> Command palette
+                <span className="ml-auto rounded border border-border px-1.5 font-mono text-[10px]">⌘K</span>
+              </button>
+              <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={() => setSettingsOpen(true)}>
+                <Settings className="h-4 w-4" /> Settings
+              </Button>
+            </div>
+          </aside>
+
+          {/* List pane */}
+          <section className="glass-inbox flex w-[420px] shrink-0 flex-col border-l border-border/50">
+            <header className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Input
+                id="search-input"
+                placeholder="Search or type a date like 10/26/25…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && runSearch()}
+                className="h-8 border-0 bg-transparent p-0 focus-visible:ring-0"
+              />
+              {activeQuery && (
+                <button onClick={() => { setQuery(""); setActiveQuery(""); }} title="Clear search" className="text-muted-foreground hover:text-foreground">
+                  <X className="h-3.5 w-3.5" />
+                </button>
               )}
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={load}>
+                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              </Button>
+            </header>
+
+            {activeQuery && (
+              <div className="border-b border-border/50 bg-primary/5 px-4 py-1.5 text-[11px] text-muted-foreground">
+                Filter: <span className="font-mono text-primary">{activeQuery}</span>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 border-b border-border/50 px-3 py-2 text-xs">
+              <Checkbox
+                checked={selected.size > 0 && selected.size === messages.length}
+                onCheckedChange={(v) => setSelected(v ? new Set(messages.map((m) => m.id)) : new Set())}
+              />
+              <span className="text-muted-foreground">{selected.size ? `${selected.size} selected` : `${messages.length} messages`}</span>
+              <div className="ml-auto flex items-center gap-1">
+                {selected.size > 0 && (
+                  <>
+                    <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => doArchive(Array.from(selected))}>
+                      <Archive className="h-3.5 w-3.5" /> Archive
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 gap-1 text-destructive" onClick={() => doTrash(Array.from(selected))}>
+                      <Trash2 className="h-3.5 w-3.5" /> Trash
+                    </Button>
+                  </>
+                )}
+                {folder === "TRASH" && (
+                  <Button size="sm" variant="destructive" className="h-7 gap-1" onClick={() => setConfirmEmpty(true)} disabled={purging}>
+                    {purging ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} Empty Trash Now
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
-      </section>
+
+            <div ref={listRef} className="flex-1 overflow-y-auto">
+              {loading && !messages.length && (
+                <div className="p-8 text-center text-sm text-muted-foreground">
+                  <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" /> Loading…
+                </div>
+              )}
+              {!loading && !messages.length && (
+                <div className="p-10 text-center text-sm text-muted-foreground">Inbox zero. 🎉</div>
+              )}
+              {messages.map((m, i) => {
+                const isOpen = openId === m.id;
+                const isCursor = i === cursorIndex;
+                const isSel = selected.has(m.id);
+                return (
+                  <div
+                    key={m.id}
+                    onClick={() => { setCursorIndex(i); openMessage(m.id); }}
+                    className={`animate-in-up group flex cursor-pointer gap-2 border-b border-border/40 px-3 py-3 transition ${
+                      isOpen ? "bg-accent/60" : isCursor ? "bg-accent/30" : "hover:bg-accent/20"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-2 pt-0.5">
+                      <Checkbox
+                        checked={isSel}
+                        onClick={(e) => e.stopPropagation()}
+                        onCheckedChange={(v) => {
+                          setSelected((prev) => {
+                            const n = new Set(prev);
+                            v ? n.add(m.id) : n.delete(m.id);
+                            return n;
+                          });
+                        }}
+                      />
+                      <button onClick={(e) => { e.stopPropagation(); doStar(m.id, !m.starred); }} className="text-muted-foreground hover:text-primary">
+                        <Star className={`h-3.5 w-3.5 ${m.starred ? "fill-primary text-primary" : ""}`} />
+                      </button>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <div className={`truncate text-sm ${m.unread ? "font-semibold" : "font-medium text-muted-foreground"}`}>
+                          {m.from.split("<")[0].replace(/"/g, "").trim() || m.fromEmail}
+                        </div>
+                        {labelBadge(aiLabels[m.id])}
+                        <div className="ml-auto shrink-0 text-[10px] text-muted-foreground">{relTime(m.date)}</div>
+                      </div>
+                      <div className={`mt-0.5 truncate text-sm ${m.unread ? "text-foreground" : "text-muted-foreground"}`}>
+                        {m.subject || "(no subject)"}
+                      </div>
+                      <div className="truncate text-xs text-muted-foreground/80">{m.snippet}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Reader — only appears when a message is opened */}
+          {opened && (
+            <section className="relative flex-1 overflow-y-auto border-l border-border/50 bg-background/40">
+              <div className="mx-auto max-w-3xl px-8 py-8">
+                <div className="mb-4 flex items-center gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setOpenId(null)}><ArrowLeft className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => doArchive([opened.id])}><Archive className="h-4 w-4" /> Archive</Button>
+                  <Button size="sm" variant="ghost" className="text-destructive" onClick={() => doTrash([opened.id])}><Trash2 className="h-4 w-4" /> Trash</Button>
+                  {folder === "TRASH" && (
+                    <Button size="sm" variant="destructive" onClick={() => doPermanentDelete([opened.id])}>Delete forever</Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="ml-auto gap-1"
+                    onClick={() => {
+                      setComposeInitial({
+                        to: opened.fromEmail,
+                        subject: opened.subject.startsWith("Re:") ? opened.subject : `Re: ${opened.subject}`,
+                        body: `\n\n\nOn ${new Date(opened.date).toLocaleString()}, ${opened.from} wrote:\n> ${opened.bodyText.split("\n").join("\n> ")}`,
+                        threadId: opened.threadId,
+                      });
+                      setComposeOpen(true);
+                    }}
+                  >
+                    <Reply className="h-4 w-4" /> Reply
+                  </Button>
+                </div>
+                <h1 className="text-2xl font-semibold tracking-tight">{opened.subject || "(no subject)"}</h1>
+                <div className="mt-2 flex items-center gap-3 text-sm text-muted-foreground">
+                  <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
+                    {(opened.from[0] || "?").toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="text-foreground">{opened.from}</div>
+                    <div className="text-xs">to {opened.to} · {new Date(opened.date).toLocaleString()}</div>
+                  </div>
+                  {labelBadge(aiLabels[opened.id])}
+                </div>
+                <div className="mt-6 rounded-2xl border border-border/60 bg-card/40 p-6">
+                  {opened.bodyHtml ? (
+                    <div className="prose-mail text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: opened.bodyHtml }} />
+                  ) : (
+                    <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{opened.bodyText}</pre>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
+          {!opened && (
+            <section className="relative flex-1 grid place-items-center border-l border-border/50 bg-background/20 p-10 text-center text-muted-foreground">
+              <div>
+                <Mail className="mx-auto mb-3 h-8 w-8 opacity-40" />
+                <div className="text-sm">Click a message to preview it here</div>
+                <div className="mt-1 text-xs opacity-70">j/k to navigate · Enter to open · c to compose · ⌘K for anything</div>
+              </div>
+            </section>
+          )}
+        </div>
+      </div>
 
       <SettingsDrawer open={settingsOpen} onOpenChange={setSettingsOpen} />
       <Compose open={composeOpen} onOpenChange={setComposeOpen} initial={composeInitial} />
@@ -513,7 +683,14 @@ function App() {
         open={cmdOpen}
         onOpenChange={setCmdOpen}
         commands={commands}
-        onSearch={(q) => { setQuery(q); setActiveQuery(q); }}
+        onSearch={(q) => { setQuery(q); setActiveQuery(transformQuery(q)); }}
+      />
+      <AiAssistant
+        open={assistantOpen}
+        onOpenChange={setAssistantOpen}
+        messages={messages}
+        labelNames={userLabels.map((l) => l.name)}
+        onExecute={executeAssistantActions}
       />
       <AlertDialog open={confirmEmpty} onOpenChange={setConfirmEmpty}>
         <AlertDialogContent className="glass-strong">
@@ -531,7 +708,42 @@ function App() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+
+      <Dialog open={newFolderOpen} onOpenChange={setNewFolderOpen}>
+        <DialogContent className="glass-strong max-w-md">
+          <DialogHeader>
+            <DialogTitle>New folder</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input
+              placeholder="Folder name (e.g. Follow up)"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground">Creates a Gmail label. You can nest with "Parent/Child".</p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setNewFolderOpen(false)}>Cancel</Button>
+            <Button
+              onClick={async () => {
+                const name = newFolderName.trim();
+                if (!name) return;
+                try {
+                  await createLabel(name);
+                  await refreshLabels();
+                  toast.success(`Folder "${name}" created`);
+                  setNewFolderOpen(false);
+                  setNewFolderName("");
+                } catch (e: any) { toast.error(e.message || "Failed"); }
+              }}
+            >
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </TooltipProvider>
   );
 }
 
