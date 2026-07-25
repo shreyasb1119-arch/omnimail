@@ -7,21 +7,19 @@ export interface Settings {
   geminiKey: string;
   theme: Theme;
   wallpaperUrl: string;
-  wallpaperOpacity: number; // 0-100 (opacity of the image itself; overlay uses inverse)
-  wallpaperBlur: number; // px
-  panelOpacity: number; // 0-100
-  panelBlur: number; // px
+  wallpaperOpacity: number;
+  wallpaperBlur: number;
+  panelOpacity: number;
+  panelBlur: number;
+  inboxOpacity: number;
+  inboxBlur: number;
 }
 
 export interface AuthSession {
   accessToken: string;
-  expiresAt: number; // epoch ms
+  expiresAt: number;
   scope: string;
-  profile: {
-    email: string;
-    name: string;
-    picture: string;
-  };
+  profile: { email: string; name: string; picture: string };
 }
 
 const SETTINGS_KEY = "shreyas-mail:settings";
@@ -36,6 +34,8 @@ const defaultSettings: Settings = {
   wallpaperBlur: 0,
   panelOpacity: 80,
   panelBlur: 24,
+  inboxOpacity: 60,
+  inboxBlur: 20,
 };
 
 function readLS<T>(key: string, fallback: T): T {

@@ -202,6 +202,10 @@
     backdrop-filter: blur(calc(var(--panel-blur, 24) * 1px)) saturate(160%);
     border: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
   }
+  .glass-inbox {
+    background-color: color-mix(in oklab, var(--panel) calc(var(--inbox-opacity, 60) * 1%), transparent);
+    backdrop-filter: blur(calc(var(--inbox-blur, 20) * 1px)) saturate(160%);
+  }
   .glass-strong {
     background-color: color-mix(in oklab, var(--card) 85%, transparent);
     backdrop-filter: blur(40px) saturate(180%);
