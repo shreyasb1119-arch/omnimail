@@ -72,3 +72,71 @@ Respond with ONLY the label word.`;
   if (raw.includes("cold")) return "cold";
   return "low";
 }
+
+export type AssistantAction =
+  | { type: "star"; ids: string[] }
+  | { type: "unstar"; ids: string[] }
+  | { type: "archive"; ids: string[] }
+  | { type: "trash"; ids: string[] }
+  | { type: "markRead"; ids: string[] }
+  | { type: "markUnread"; ids: string[] }
+  | { type: "label"; ids: string[]; labelName: string }
+  | { type: "search"; query: string }
+  | { type: "compose"; to: string; subject: string; body: string };
+
+export interface AssistantPlan {
+  reply: string;
+  actions: AssistantAction[];
+}
+
+export async function aiPlanActions(
+  command: string,
+  context: { id: string; from: string; subject: string; snippet: string; starred: boolean; unread: boolean }[],
+  labels: string[],
+): Promise<AssistantPlan> {
+  const system = `You are an email operations assistant for a Gmail client.
+Return ONLY compact JSON: {"reply": string, "actions": Action[]}
+Action variants:
+{"type":"star","ids":[string]}
+{"type":"unstar","ids":[string]}
+{"type":"archive","ids":[string]}
+{"type":"trash","ids":[string]}
+{"type":"markRead","ids":[string]}
+{"type":"markUnread","ids":[string]}
+{"type":"label","ids":[string],"labelName":string}
+{"type":"search","query":string}
+{"type":"compose","to":string,"subject":string,"body":string}
+
+Rules:
+- Use ONLY ids from the provided list. Never invent ids.
+- "first N" = first N messages of the list (already sorted newest first).
+- Dates like 10/26/25 or "before Oct 26" -> single {"type":"search","query":"before:YYYY/MM/DD"}.
+- "reply" is one short sentence. Return valid JSON only, no markdown fences.`;
+
+  const list = context
+    .map(
+      (m, i) =>
+        `${i + 1}. id=${m.id} from="${m.from}" subject="${m.subject}" starred=${m.starred} unread=${m.unread}`,
+    )
+    .join("\n");
+  const prompt = `Available labels: ${labels.join(", ") || "(none)"}
+Current message list (newest first):
+${list || "(empty)"}
+
+User command: ${command}`;
+
+  const raw = await aiChat(prompt, system);
+  const cleaned = raw.replace(/```json|```/g, "").trim();
+  const jsonStart = cleaned.indexOf("{");
+  const jsonEnd = cleaned.lastIndexOf("}");
+  const slice = jsonStart >= 0 ? cleaned.slice(jsonStart, jsonEnd + 1) : cleaned;
+  try {
+    const parsed = JSON.parse(slice);
+    if (!Array.isArray(parsed.actions)) parsed.actions = [];
+    if (typeof parsed.reply !== "string") parsed.reply = "";
+    return parsed as AssistantPlan;
+  } catch {
+    return { reply: "I couldn't parse a plan. Please rephrase.", actions: [] };
+  }
+}
+

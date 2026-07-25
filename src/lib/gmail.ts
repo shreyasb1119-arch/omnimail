@@ -205,3 +205,27 @@ export const SYSTEM_FOLDERS = [
   { id: "SPAM", label: "Spam", icon: "shield" },
   { id: "TRASH", label: "Trash", icon: "trash" },
 ] as const;
+
+export interface GmailLabel {
+  id: string;
+  name: string;
+  type: "system" | "user";
+  messagesUnread?: number;
+}
+
+export async function listLabels(): Promise<GmailLabel[]> {
+  const r = await api<{ labels: GmailLabel[] }>(`/labels`);
+  return r.labels || [];
+}
+
+export async function createLabel(name: string): Promise<GmailLabel> {
+  return api<GmailLabel>(`/labels`, {
+    method: "POST",
+    body: JSON.stringify({
+      name,
+      labelListVisibility: "labelShow",
+      messageListVisibility: "show",
+    }),
+  });
+}
+
