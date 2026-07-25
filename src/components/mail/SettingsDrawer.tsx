@@ -139,30 +139,34 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
           </section>
           <Separator />
           <section className="space-y-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Panels</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sidebar panels</h3>
             <div className="space-y-2">
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Panel opacity</span><span>{s.panelOpacity}%</span>
               </div>
-              <Slider
-                value={[s.panelOpacity]}
-                min={20}
-                max={100}
-                step={1}
-                onValueChange={([v]) => settingsStore.set({ panelOpacity: v })}
-              />
+              <Slider value={[s.panelOpacity]} min={20} max={100} step={1} onValueChange={([v]) => settingsStore.set({ panelOpacity: v })} />
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Panel blur</span><span>{s.panelBlur}px</span>
               </div>
-              <Slider
-                value={[s.panelBlur]}
-                min={0}
-                max={60}
-                step={1}
-                onValueChange={([v]) => settingsStore.set({ panelBlur: v })}
-              />
+              <Slider value={[s.panelBlur]} min={0} max={60} step={1} onValueChange={([v]) => settingsStore.set({ panelBlur: v })} />
+            </div>
+          </section>
+          <Separator />
+          <section className="space-y-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Inbox pane</h3>
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Inbox opacity</span><span>{s.inboxOpacity}%</span>
+              </div>
+              <Slider value={[s.inboxOpacity]} min={0} max={100} step={1} onValueChange={([v]) => settingsStore.set({ inboxOpacity: v })} />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Inbox blur</span><span>{s.inboxBlur}px</span>
+              </div>
+              <Slider value={[s.inboxBlur]} min={0} max={60} step={1} onValueChange={([v]) => settingsStore.set({ inboxBlur: v })} />
             </div>
           </section>
         </div>
