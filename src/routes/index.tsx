@@ -543,6 +543,21 @@ function App() {
                   </TooltipContent>
                 </Tooltip>
               </div>
+
+              <div className="flex items-center gap-1">
+                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runDigest} disabled={aiBusy === "digest"}>
+                  {aiBusy === "digest" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Newspaper className="h-3.5 w-3.5" />} Daily Digest
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-[220px] text-xs">
+                    Reads the messages currently in view and writes a short brief — what's urgent, what can wait, grouped by theme.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
             </div>
 
             <div className="mt-auto space-y-2">
