@@ -373,7 +373,7 @@ function App() {
   }, [messages, cursorIndex, openMessage]);
 
   const opened = messages.find((m) => m.id === openId) || null;
-  const avatarSrc = settings.avatarUrl || session.profile.picture || "";
+  const avatarSrc = settings.avatarUrl || session?.profile.picture || "";
 
   // ---- Extra AI features ----
   const runSummarize = async () => {
