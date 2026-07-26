@@ -27,7 +27,7 @@ import {
 } from "@/lib/gmail";
 import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
 import { useSession, useSettings, sessionStore, getAiLabels, setAiLabel, type AiLabel } from "@/lib/store";
-import { aiTriage } from "@/lib/ai";
+import { aiTriage, aiSummarize, aiSmartReplies, aiDigest } from "@/lib/ai";
 import type { AssistantAction } from "@/lib/ai";
 import { ThemeApplier } from "@/components/mail/ThemeApplier";
 import { SettingsDrawer } from "@/components/mail/SettingsDrawer";
@@ -122,7 +122,13 @@ function App() {
   const [purging, setPurging] = useState(false);
   const [confirmEmpty, setConfirmEmpty] = useState(false);
   const [cursorIndex, setCursorIndex] = useState(0);
+  const [aiBusy, setAiBusy] = useState<null | "summary" | "replies" | "digest">(null);
+  const [summary, setSummary] = useState<string>("");
+  const [smartReplies, setSmartReplies] = useState<string[]>([]);
+  const [digest, setDigest] = useState<string>("");
+  const [digestOpen, setDigestOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     (async () => {
