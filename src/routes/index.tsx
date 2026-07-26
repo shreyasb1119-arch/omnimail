@@ -572,7 +572,12 @@ function App() {
           </aside>
 
           {/* List pane */}
-          <section className="glass-inbox flex w-[420px] shrink-0 flex-col border-l border-border/50">
+          <section
+            className={`glass-inbox flex flex-col overflow-hidden rounded-2xl shadow-xl transition-all duration-300 ${
+              opened ? "w-[420px] shrink-0" : "flex-1"
+            }`}
+          >
+
             <header className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
