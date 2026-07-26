@@ -391,18 +391,25 @@ function App() {
       <ThemeApplier />
       <Toaster position="top-right" richColors />
       <div className="relative h-screen w-screen overflow-hidden p-3 text-foreground">
-        <div className="flex h-full w-full overflow-hidden rounded-3xl border border-border/60 shadow-2xl">
+        <div className="flex h-full w-full gap-3 overflow-hidden">
           {/* Sidebar */}
-          <aside className="glass flex w-64 shrink-0 flex-col px-3 py-4">
-            <div className="mb-5 flex items-center gap-2 px-2">
-              <div className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground shadow-md">
-                <Mail className="h-4 w-4" />
+          <aside className="glass flex w-64 shrink-0 flex-col overflow-hidden rounded-2xl px-3 py-4 shadow-xl">
+            <div className="mb-5 flex items-center gap-2.5 px-1">
+              <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground shadow-md">
+                {avatarSrc ? (
+                  <img src={avatarSrc} alt="Your avatar" className="h-full w-full object-cover" />
+                ) : (
+                  <Mail className="h-4 w-4" />
+                )}
               </div>
-              <div>
-                <div className="text-sm font-semibold tracking-tight">Shreyas Mail</div>
-                <div className="text-[10px] text-muted-foreground">{session.profile.email}</div>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold tracking-tight">
+                  {session.profile.name || "Shreyas Mail"}
+                </div>
+                <div className="truncate text-[10px] text-muted-foreground">{session.profile.email}</div>
               </div>
             </div>
+
             <Button
               onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
               className="mb-3 justify-start gap-2 rounded-xl"
