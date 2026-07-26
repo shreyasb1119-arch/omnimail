@@ -6,6 +6,7 @@ export interface Settings {
   clientId: string;
   geminiKey: string;
   theme: Theme;
+  avatarUrl: string;
   wallpaperUrl: string;
   wallpaperOpacity: number;
   wallpaperBlur: number;
@@ -29,6 +30,7 @@ const defaultSettings: Settings = {
   clientId: "",
   geminiKey: "",
   theme: "superhuman",
+  avatarUrl: "",
   wallpaperUrl: "",
   wallpaperOpacity: 40,
   wallpaperBlur: 0,
@@ -37,6 +39,7 @@ const defaultSettings: Settings = {
   inboxOpacity: 60,
   inboxBlur: 20,
 };
+
 
 function readLS<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
