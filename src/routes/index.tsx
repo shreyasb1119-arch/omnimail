@@ -367,6 +367,42 @@ function App() {
   }, [messages, cursorIndex, openMessage]);
 
   const opened = messages.find((m) => m.id === openId) || null;
+  const avatarSrc = settings.avatarUrl || session.profile.picture || "";
+
+  // ---- Extra AI features ----
+  const runSummarize = async () => {
+    if (!opened) return;
+    setAiBusy("summary");
+    try {
+      const text = await aiSummarize(opened.subject, opened.from, opened.bodyText || opened.snippet);
+      setSummary(text);
+    } catch (e: any) { toast.error(e.message || "Summary failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runSmartReplies = async () => {
+    if (!opened) return;
+    setAiBusy("replies");
+    try {
+      const r = await aiSmartReplies(opened.subject, opened.from, opened.bodyText || opened.snippet);
+      setSmartReplies(r);
+    } catch (e: any) { toast.error(e.message || "Smart replies failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runDigest = async () => {
+    if (!messages.length) return;
+    setAiBusy("digest");
+    try {
+      const text = await aiDigest(
+        messages.slice(0, 25).map((m) => ({ from: m.from, subject: m.subject, snippet: m.snippet })),
+      );
+      setDigest(text);
+      setDigestOpen(true);
+    } catch (e: any) { toast.error(e.message || "Digest failed"); }
+    finally { setAiBusy(null); }
+  };
+
 
   const commands: Cmd[] = useMemo(() => [
     { id: "compose", label: "Compose", icon: <PenSquare className="h-4 w-4" />, shortcut: "C", action: () => { setComposeInitial(undefined); setComposeOpen(true); }, group: "Actions" },
