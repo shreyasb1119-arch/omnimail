@@ -205,33 +205,38 @@
   .glass-inbox {
     background-color: color-mix(in oklab, var(--panel) calc(var(--inbox-opacity, 60) * 1%), transparent);
     backdrop-filter: blur(calc(var(--inbox-blur, 20) * 1px)) saturate(160%);
+    border: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
   }
   .glass-strong {
-    background-color: color-mix(in oklab, var(--card) 85%, transparent);
-    backdrop-filter: blur(40px) saturate(180%);
+    background-color: color-mix(in oklab, var(--panel) calc(var(--panel-opacity, 80) * 1%), transparent);
+    backdrop-filter: blur(calc(max(var(--panel-blur, 24), 18) * 1px)) saturate(180%);
     border: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
   }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { scrollbar-width: none; }
 }
 
-/* Wallpaper */
+/* Wallpaper: image layer is blurred + faded, dim layer sits on top */
 .app-wallpaper {
   position: fixed;
-  inset: 0;
-  z-index: -1;
+  inset: -8%;
+  z-index: -2;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  filter: blur(calc(var(--wallpaper-blur, 0) * 1px));
+  opacity: calc(var(--wallpaper-opacity, 40) * 0.01);
+  transform: scale(1.06);
+  transition: filter 120ms linear, opacity 120ms linear;
+  will-change: filter, opacity;
 }
-.app-wallpaper::after {
-  content: "";
-  position: absolute;
+.app-wallpaper-dim {
+  position: fixed;
   inset: 0;
+  z-index: -3;
   background: var(--background);
-  opacity: calc(1 - (var(--wallpaper-opacity, 40) * 0.01));
-  backdrop-filter: blur(calc(var(--wallpaper-blur, 0) * 1px));
 }
+
 
 /* Micro animations */
 @keyframes fade-in-up {

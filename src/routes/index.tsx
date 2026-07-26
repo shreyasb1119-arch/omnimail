@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import {
   Inbox, Star, Send, Trash2, PenSquare, Sparkles, Settings, Archive,
   Search, Mail, ShieldAlert, FileText, RefreshCw, Zap, Filter, ArrowLeft,
-  Reply, Loader2, Command as CmdIcon, Info, Folder, Plus, MessageSquare, X,
+  Reply, Loader2, Command as CmdIcon, Info, Folder, Plus, MessageSquare, X, Newspaper, ListChecks,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -27,7 +27,7 @@ import {
 } from "@/lib/gmail";
 import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
 import { useSession, useSettings, sessionStore, getAiLabels, setAiLabel, type AiLabel } from "@/lib/store";
-import { aiTriage } from "@/lib/ai";
+import { aiTriage, aiSummarize, aiSmartReplies, aiDigest } from "@/lib/ai";
 import type { AssistantAction } from "@/lib/ai";
 import { ThemeApplier } from "@/components/mail/ThemeApplier";
 import { SettingsDrawer } from "@/components/mail/SettingsDrawer";
@@ -122,7 +122,13 @@ function App() {
   const [purging, setPurging] = useState(false);
   const [confirmEmpty, setConfirmEmpty] = useState(false);
   const [cursorIndex, setCursorIndex] = useState(0);
+  const [aiBusy, setAiBusy] = useState<null | "summary" | "replies" | "digest">(null);
+  const [summary, setSummary] = useState<string>("");
+  const [smartReplies, setSmartReplies] = useState<string[]>([]);
+  const [digest, setDigest] = useState<string>("");
+  const [digestOpen, setDigestOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     (async () => {
@@ -137,6 +143,8 @@ function App() {
   }, [settings.clientId]);
 
   useEffect(() => setAiLabels(getAiLabels()), []);
+  useEffect(() => { setSummary(""); setSmartReplies([]); }, [openId]);
+
 
   const refreshLabels = useCallback(async () => {
     if (!session) return;
@@ -367,6 +375,42 @@ function App() {
   }, [messages, cursorIndex, openMessage]);
 
   const opened = messages.find((m) => m.id === openId) || null;
+  const avatarSrc = settings.avatarUrl || session?.profile.picture || "";
+
+  // ---- Extra AI features ----
+  const runSummarize = async () => {
+    if (!opened) return;
+    setAiBusy("summary");
+    try {
+      const text = await aiSummarize(opened.subject, opened.from, opened.bodyText || opened.snippet);
+      setSummary(text);
+    } catch (e: any) { toast.error(e.message || "Summary failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runSmartReplies = async () => {
+    if (!opened) return;
+    setAiBusy("replies");
+    try {
+      const r = await aiSmartReplies(opened.subject, opened.from, opened.bodyText || opened.snippet);
+      setSmartReplies(r);
+    } catch (e: any) { toast.error(e.message || "Smart replies failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runDigest = async () => {
+    if (!messages.length) return;
+    setAiBusy("digest");
+    try {
+      const text = await aiDigest(
+        messages.slice(0, 25).map((m) => ({ from: m.from, subject: m.subject, snippet: m.snippet })),
+      );
+      setDigest(text);
+      setDigestOpen(true);
+    } catch (e: any) { toast.error(e.message || "Digest failed"); }
+    finally { setAiBusy(null); }
+  };
+
 
   const commands: Cmd[] = useMemo(() => [
     { id: "compose", label: "Compose", icon: <PenSquare className="h-4 w-4" />, shortcut: "C", action: () => { setComposeInitial(undefined); setComposeOpen(true); }, group: "Actions" },
@@ -374,6 +418,8 @@ function App() {
     { id: "assistant", label: "Open AI Assistant", icon: <MessageSquare className="h-4 w-4" />, action: () => setAssistantOpen(true), group: "AI" },
     { id: "triage", label: "AI Smart Triage", icon: <Sparkles className="h-4 w-4" />, action: runTriage, group: "AI" },
     { id: "purge", label: "AI Auto-Purge Spam", icon: <Zap className="h-4 w-4" />, action: runAutoPurge, group: "AI" },
+    { id: "digest", label: "AI Daily Digest", icon: <Newspaper className="h-4 w-4" />, action: runDigest, group: "AI" },
+
     { id: "newfolder", label: "New folder…", icon: <Plus className="h-4 w-4" />, action: () => setNewFolderOpen(true), group: "Actions" },
     { id: "settings", label: "Open Settings", icon: <Settings className="h-4 w-4" />, action: () => setSettingsOpen(true), group: "Actions" },
     ...SYSTEM_FOLDERS.map((f) => ({ id: `go-${f.id}`, label: `Go to ${f.label}`, icon: <f.icon className="h-4 w-4" />, action: () => { setFolder(f.id); setActiveQuery(""); setQuery(""); }, group: "Navigate" })),
@@ -391,18 +437,25 @@ function App() {
       <ThemeApplier />
       <Toaster position="top-right" richColors />
       <div className="relative h-screen w-screen overflow-hidden p-3 text-foreground">
-        <div className="flex h-full w-full overflow-hidden rounded-3xl border border-border/60 shadow-2xl">
+        <div className="flex h-full w-full gap-3 overflow-hidden">
           {/* Sidebar */}
-          <aside className="glass flex w-64 shrink-0 flex-col px-3 py-4">
-            <div className="mb-5 flex items-center gap-2 px-2">
-              <div className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground shadow-md">
-                <Mail className="h-4 w-4" />
+          <aside className="glass flex w-64 shrink-0 flex-col overflow-hidden rounded-2xl px-3 py-4 shadow-xl">
+            <div className="mb-5 flex items-center gap-2.5 px-1">
+              <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground shadow-md">
+                {avatarSrc ? (
+                  <img src={avatarSrc} alt="Your avatar" className="h-full w-full object-cover" />
+                ) : (
+                  <Mail className="h-4 w-4" />
+                )}
               </div>
-              <div>
-                <div className="text-sm font-semibold tracking-tight">Shreyas Mail</div>
-                <div className="text-[10px] text-muted-foreground">{session.profile.email}</div>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold tracking-tight">
+                  {session.profile.name || "Shreyas Mail"}
+                </div>
+                <div className="truncate text-[10px] text-muted-foreground">{session.profile.email}</div>
               </div>
             </div>
+
             <Button
               onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
               className="mb-3 justify-start gap-2 rounded-xl"
@@ -494,6 +547,21 @@ function App() {
                   </TooltipContent>
                 </Tooltip>
               </div>
+
+              <div className="flex items-center gap-1">
+                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runDigest} disabled={aiBusy === "digest"}>
+                  {aiBusy === "digest" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Newspaper className="h-3.5 w-3.5" />} Daily Digest
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-[220px] text-xs">
+                    Reads the messages currently in view and writes a short brief — what's urgent, what can wait, grouped by theme.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
             </div>
 
             <div className="mt-auto space-y-2">
@@ -508,7 +576,12 @@ function App() {
           </aside>
 
           {/* List pane */}
-          <section className="glass-inbox flex w-[420px] shrink-0 flex-col border-l border-border/50">
+          <section
+            className={`glass-inbox flex flex-col overflow-hidden rounded-2xl shadow-xl transition-all duration-300 ${
+              opened ? "w-[420px] shrink-0" : "flex-1"
+            }`}
+          >
+
             <header className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
@@ -616,11 +689,11 @@ function App() {
             </div>
           </section>
 
-          {/* Reader — only appears when a message is opened */}
+          {/* Reader — only exists when a message is opened */}
           {opened && (
-            <section className="relative flex-1 overflow-y-auto border-l border-border/50 bg-background/40">
+            <section className="glass-inbox animate-in-up relative flex-1 overflow-y-auto rounded-2xl shadow-xl">
               <div className="mx-auto max-w-3xl px-8 py-8">
-                <div className="mb-4 flex items-center gap-2">
+                <div className="mb-4 flex flex-wrap items-center gap-2">
                   <Button size="sm" variant="ghost" onClick={() => setOpenId(null)}><ArrowLeft className="h-4 w-4" /></Button>
                   <Button size="sm" variant="ghost" onClick={() => doArchive([opened.id])}><Archive className="h-4 w-4" /> Archive</Button>
                   <Button size="sm" variant="ghost" className="text-destructive" onClick={() => doTrash([opened.id])}><Trash2 className="h-4 w-4" /> Trash</Button>
@@ -644,6 +717,63 @@ function App() {
                     <Reply className="h-4 w-4" /> Reply
                   </Button>
                 </div>
+
+                {/* AI toolbar */}
+                <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-card/40 px-3 py-2">
+                  <span className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <Sparkles className="h-3.5 w-3.5" /> AI
+                  </span>
+                  <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={runSummarize} disabled={aiBusy === "summary"}>
+                    {aiBusy === "summary" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ListChecks className="h-3.5 w-3.5" />} Summarize
+                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[240px] text-xs">
+                      Condenses this email into 3 bullets plus the single action it asks of you.
+                    </TooltipContent>
+                  </Tooltip>
+                  <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={runSmartReplies} disabled={aiBusy === "replies"}>
+                    {aiBusy === "replies" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquare className="h-3.5 w-3.5" />} Smart replies
+                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[240px] text-xs">
+                      Generates 3 one-line replies. Click one to open Compose pre-filled with it.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+
+                {summary && (
+                  <div className="mb-4 whitespace-pre-wrap rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm">
+                    {summary}
+                  </div>
+                )}
+                {smartReplies.length > 0 && (
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {smartReplies.map((r, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          setComposeInitial({
+                            to: opened.fromEmail,
+                            subject: opened.subject.startsWith("Re:") ? opened.subject : `Re: ${opened.subject}`,
+                            body: r,
+                            threadId: opened.threadId,
+                          });
+                          setComposeOpen(true);
+                        }}
+                        className="rounded-full border border-border/60 bg-card/50 px-3 py-1.5 text-xs transition hover:border-primary hover:text-primary"
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <h1 className="text-2xl font-semibold tracking-tight">{opened.subject || "(no subject)"}</h1>
                 <div className="mt-2 flex items-center gap-3 text-sm text-muted-foreground">
                   <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
@@ -665,15 +795,7 @@ function App() {
               </div>
             </section>
           )}
-          {!opened && (
-            <section className="relative flex-1 grid place-items-center border-l border-border/50 bg-background/20 p-10 text-center text-muted-foreground">
-              <div>
-                <Mail className="mx-auto mb-3 h-8 w-8 opacity-40" />
-                <div className="text-sm">Click a message to preview it here</div>
-                <div className="mt-1 text-xs opacity-70">j/k to navigate · Enter to open · c to compose · ⌘K for anything</div>
-              </div>
-            </section>
-          )}
+
         </div>
       </div>
 
@@ -708,6 +830,16 @@ function App() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={digestOpen} onOpenChange={setDigestOpen}>
+        <DialogContent className="glass-strong max-w-lg rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Newspaper className="h-4 w-4 text-primary" /> Daily Digest</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">{digest}</div>
+        </DialogContent>
+      </Dialog>
+
 
       <Dialog open={newFolderOpen} onOpenChange={setNewFolderOpen}>
         <DialogContent className="glass-strong max-w-md">

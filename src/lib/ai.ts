@@ -10,7 +10,8 @@ export async function aiChat(prompt: string, system = ""): Promise<string> {
       { role: "user", parts: [{ text: prompt }] },
     ];
     const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${encodeURIComponent(key)}`,
+
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -89,38 +90,88 @@ export interface AssistantPlan {
   actions: AssistantAction[];
 }
 
+type Ctx = { id: string; from: string; subject: string; snippet: string; starred: boolean; unread: boolean };
+
+const WORD_NUM: Record<string, number> = {
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8,
+  nine: 9, ten: 10, eleven: 11, twelve: 12, fifteen: 15, twenty: 20, thirty: 30, fifty: 50,
+};
+
+const VERB_MAP: { re: RegExp; type: AssistantAction["type"] }[] = [
+  { re: /\b(un-?star|remove (the )?stars?)\b/i, type: "unstar" },
+  { re: /\b(star|favorite|flag)\b/i, type: "star" },
+  { re: /\b(archive)\b/i, type: "archive" },
+  { re: /\b(trash|delete|bin)\b/i, type: "trash" },
+  { re: /\bmark(ed)?\s+.*\bunread\b/i, type: "markUnread" },
+  { re: /\bmark(ed)?\s+.*\bread\b/i, type: "markRead" },
+];
+
+/** Deterministic parser for the common "<verb> the first N messages" family. */
+function localPlan(command: string, context: Ctx[]): AssistantPlan | null {
+  const cmd = command.trim();
+  if (!cmd || !context.length) return null;
+
+  const verb = VERB_MAP.find((v) => v.re.test(cmd));
+  if (!verb) return null;
+  if (/\bfrom\b|\bsubject\b|\bwith\b|\bcontain|\babout\b|\bnewsletter|\bsender\b/i.test(cmd)) return null;
+
+  const numMatch = cmd.match(/\b(\d{1,3})\b/);
+  const wordMatch = cmd.match(
+    /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|fifty)\b/i,
+  );
+  const isAll = /\b(all|every|everything)\b/i.test(cmd);
+  let n = numMatch ? parseInt(numMatch[1], 10) : wordMatch ? WORD_NUM[wordMatch[1].toLowerCase()] : isAll ? context.length : NaN;
+  if (!Number.isFinite(n) || n <= 0) return null;
+  n = Math.min(n, context.length);
+
+  const fromEnd = /\b(last|oldest|bottom)\b/i.test(cmd);
+  const slice = fromEnd ? context.slice(-n) : context.slice(0, n);
+  const ids = slice.map((m) => m.id);
+
+  return {
+    reply: `${verb.type} ${ids.length} ${fromEnd ? "oldest" : "newest"} message${ids.length === 1 ? "" : "s"}.`,
+    actions: [{ type: verb.type, ids } as AssistantAction],
+  };
+}
+
 export async function aiPlanActions(
   command: string,
-  context: { id: string; from: string; subject: string; snippet: string; starred: boolean; unread: boolean }[],
+  context: Ctx[],
   labels: string[],
 ): Promise<AssistantPlan> {
+  const local = localPlan(command, context);
+  if (local) return local;
+
   const system = `You are an email operations assistant for a Gmail client.
 Return ONLY compact JSON: {"reply": string, "actions": Action[]}
+
+Messages are referenced by their 1-based POSITION NUMBER in the list, never by id.
 Action variants:
-{"type":"star","ids":[string]}
-{"type":"unstar","ids":[string]}
-{"type":"archive","ids":[string]}
-{"type":"trash","ids":[string]}
-{"type":"markRead","ids":[string]}
-{"type":"markUnread","ids":[string]}
-{"type":"label","ids":[string],"labelName":string}
+{"type":"star","n":[1,2,3]}
+{"type":"unstar","n":[...]}
+{"type":"archive","n":[...]}
+{"type":"trash","n":[...]}
+{"type":"markRead","n":[...]}
+{"type":"markUnread","n":[...]}
+{"type":"label","n":[...],"labelName":string}
 {"type":"search","query":string}
 {"type":"compose","to":string,"subject":string,"body":string}
 
 Rules:
-- Use ONLY ids from the provided list. Never invent ids.
-- "first N" = first N messages of the list (already sorted newest first).
+- "first N"/"top N" = positions 1..N. "last N" = the final N positions. "all" = every position.
+- If the user asks for N messages you MUST output exactly N position numbers (unless the list is shorter).
+- Only use positions that exist (1..${context.length}).
 - Dates like 10/26/25 or "before Oct 26" -> single {"type":"search","query":"before:YYYY/MM/DD"}.
 - "reply" is one short sentence. Return valid JSON only, no markdown fences.`;
 
   const list = context
     .map(
       (m, i) =>
-        `${i + 1}. id=${m.id} from="${m.from}" subject="${m.subject}" starred=${m.starred} unread=${m.unread}`,
+        `${i + 1}. from="${m.from}" subject="${m.subject}" starred=${m.starred} unread=${m.unread}`,
     )
     .join("\n");
   const prompt = `Available labels: ${labels.join(", ") || "(none)"}
-Current message list (newest first):
+Messages (${context.length} total, newest first):
 ${list || "(empty)"}
 
 User command: ${command}`;
@@ -130,13 +181,80 @@ User command: ${command}`;
   const jsonStart = cleaned.indexOf("{");
   const jsonEnd = cleaned.lastIndexOf("}");
   const slice = jsonStart >= 0 ? cleaned.slice(jsonStart, jsonEnd + 1) : cleaned;
+
+  let parsed: any;
   try {
-    const parsed = JSON.parse(slice);
-    if (!Array.isArray(parsed.actions)) parsed.actions = [];
-    if (typeof parsed.reply !== "string") parsed.reply = "";
-    return parsed as AssistantPlan;
+    parsed = JSON.parse(slice);
   } catch {
     return { reply: "I couldn't parse a plan. Please rephrase.", actions: [] };
   }
+
+  const requested = (() => {
+    const m = command.match(/\b(\d{1,3})\b/);
+    const w = command.match(
+      /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|fifty)\b/i,
+    );
+    if (m) return Math.min(parseInt(m[1], 10), context.length);
+    if (w) return Math.min(WORD_NUM[w[1].toLowerCase()], context.length);
+    if (/\b(all|every|everything)\b/i.test(command)) return context.length;
+    return 0;
+  })();
+  const wantsLast = /\b(last|oldest|bottom)\b/i.test(command);
+
+  const actions: AssistantAction[] = [];
+  for (const a of Array.isArray(parsed.actions) ? parsed.actions : []) {
+    if (!a || typeof a.type !== "string") continue;
+    if (a.type === "search" || a.type === "compose") {
+      actions.push(a as AssistantAction);
+      continue;
+    }
+    const nums: number[] = Array.isArray(a.n) ? a.n : Array.isArray(a.indexes) ? a.indexes : [];
+    let idxs = Array.from(
+      new Set(
+        nums
+          .map((x: any) => Number(x))
+          .filter((x: number) => Number.isFinite(x) && x >= 1 && x <= context.length)
+          .map((x: number) => x - 1),
+      ),
+    );
+    // Enforce the count the user explicitly asked for.
+    if (requested > 0 && idxs.length !== requested) {
+      idxs = wantsLast
+        ? context.slice(-requested).map((_, i) => context.length - requested + i)
+        : context.slice(0, requested).map((_, i) => i);
+    }
+    let ids = idxs.map((i) => context[i].id);
+    // Fall back to ids if the model returned raw ids anyway.
+    if (!ids.length && Array.isArray(a.ids)) {
+      const known = new Set(context.map((m) => m.id));
+      ids = a.ids.filter((id: string) => known.has(id));
+    }
+    if (!ids.length) continue;
+    actions.push(a.type === "label" ? { type: "label", ids, labelName: String(a.labelName || "New folder") } : ({ type: a.type, ids } as AssistantAction));
+  }
+
+  return { reply: typeof parsed.reply === "string" ? parsed.reply : "", actions };
 }
+
+export async function aiSummarize(subject: string, from: string, body: string) {
+  const system = `Summarize the email in at most 3 crisp bullet points, then a line starting with "Action:" stating what the reader should do (or "Action: none").`;
+  return aiChat(`From: ${from}\nSubject: ${subject}\n\n${body.slice(0, 6000)}`, system);
+}
+
+export async function aiSmartReplies(subject: string, from: string, body: string): Promise<string[]> {
+  const system = `Suggest exactly 3 short reply options (max 12 words each) for this email. Return them one per line, no numbering, no quotes.`;
+  const raw = await aiChat(`From: ${from}\nSubject: ${subject}\n\n${body.slice(0, 4000)}`, system);
+  return raw.split("\n").map((s) => s.replace(/^[-*\d.\s]+/, "").trim()).filter(Boolean).slice(0, 3);
+}
+
+export async function aiDigest(
+  items: { from: string; subject: string; snippet: string }[],
+): Promise<string> {
+  const system = `You write a tight daily inbox digest. Group by theme, note anything urgent first, max 8 bullets. Plain text, no preamble.`;
+  const list = items
+    .map((m, i) => `${i + 1}. from=${m.from} | ${m.subject} | ${m.snippet}`)
+    .join("\n");
+  return aiChat(`Here are my recent emails:\n${list}`, system);
+}
+
 

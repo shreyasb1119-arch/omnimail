@@ -34,6 +34,13 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
     reader.readAsDataURL(f);
   };
 
+  const onAvatar = (f: File) => {
+    const reader = new FileReader();
+    reader.onload = () => settingsStore.set({ avatarUrl: String(reader.result) });
+    reader.readAsDataURL(f);
+  };
+
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[420px] sm:max-w-[420px] glass-strong overflow-y-auto">
@@ -63,7 +70,9 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
                 value={geminiKey}
                 onChange={(e) => setGeminiKey(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">Leave empty to use built-in AI.</p>
+              <p className="text-xs text-muted-foreground">
+                With a key, requests go straight to <b>Gemini 3.1 Flash Lite</b>. Leave empty to use built-in AI.
+              </p>
             </div>
             <div className="flex gap-2">
               <Button onClick={save}>Save</Button>
@@ -71,6 +80,33 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
             </div>
           </section>
           <Separator />
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Avatar</h3>
+            <div className="flex items-center gap-3">
+              <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full border border-border/60 bg-primary/15 text-sm font-semibold text-primary">
+                {s.avatarUrl ? (
+                  <img src={s.avatarUrl} alt="Your avatar" className="h-full w-full object-cover" />
+                ) : (
+                  "You"
+                )}
+              </div>
+              <div className="flex-1 space-y-2">
+                <Input
+                  placeholder="https://image-url…"
+                  value={s.avatarUrl}
+                  onChange={(e) => settingsStore.set({ avatarUrl: e.target.value })}
+                />
+                <Input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && onAvatar(e.target.files[0])} />
+              </div>
+            </div>
+            {s.avatarUrl && (
+              <Button variant="ghost" size="sm" onClick={() => settingsStore.set({ avatarUrl: "" })}>
+                Reset to Google photo
+              </Button>
+            )}
+          </section>
+          <Separator />
+
           <section className="space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Theme</h3>
             <div className="grid grid-cols-2 gap-2">
