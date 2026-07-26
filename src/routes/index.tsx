@@ -685,11 +685,11 @@ function App() {
             </div>
           </section>
 
-          {/* Reader — only appears when a message is opened */}
+          {/* Reader — only exists when a message is opened */}
           {opened && (
-            <section className="relative flex-1 overflow-y-auto border-l border-border/50 bg-background/40">
+            <section className="glass-inbox animate-in-up relative flex-1 overflow-y-auto rounded-2xl shadow-xl">
               <div className="mx-auto max-w-3xl px-8 py-8">
-                <div className="mb-4 flex items-center gap-2">
+                <div className="mb-4 flex flex-wrap items-center gap-2">
                   <Button size="sm" variant="ghost" onClick={() => setOpenId(null)}><ArrowLeft className="h-4 w-4" /></Button>
                   <Button size="sm" variant="ghost" onClick={() => doArchive([opened.id])}><Archive className="h-4 w-4" /> Archive</Button>
                   <Button size="sm" variant="ghost" className="text-destructive" onClick={() => doTrash([opened.id])}><Trash2 className="h-4 w-4" /> Trash</Button>
@@ -713,6 +713,63 @@ function App() {
                     <Reply className="h-4 w-4" /> Reply
                   </Button>
                 </div>
+
+                {/* AI toolbar */}
+                <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-card/40 px-3 py-2">
+                  <span className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <Sparkles className="h-3.5 w-3.5" /> AI
+                  </span>
+                  <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={runSummarize} disabled={aiBusy === "summary"}>
+                    {aiBusy === "summary" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ListChecks className="h-3.5 w-3.5" />} Summarize
+                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[240px] text-xs">
+                      Condenses this email into 3 bullets plus the single action it asks of you.
+                    </TooltipContent>
+                  </Tooltip>
+                  <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={runSmartReplies} disabled={aiBusy === "replies"}>
+                    {aiBusy === "replies" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquare className="h-3.5 w-3.5" />} Smart replies
+                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[240px] text-xs">
+                      Generates 3 one-line replies. Click one to open Compose pre-filled with it.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+
+                {summary && (
+                  <div className="mb-4 whitespace-pre-wrap rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm">
+                    {summary}
+                  </div>
+                )}
+                {smartReplies.length > 0 && (
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {smartReplies.map((r, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          setComposeInitial({
+                            to: opened.fromEmail,
+                            subject: opened.subject.startsWith("Re:") ? opened.subject : `Re: ${opened.subject}`,
+                            body: r,
+                            threadId: opened.threadId,
+                          });
+                          setComposeOpen(true);
+                        }}
+                        className="rounded-full border border-border/60 bg-card/50 px-3 py-1.5 text-xs transition hover:border-primary hover:text-primary"
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <h1 className="text-2xl font-semibold tracking-tight">{opened.subject || "(no subject)"}</h1>
                 <div className="mt-2 flex items-center gap-3 text-sm text-muted-foreground">
                   <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
@@ -734,15 +791,7 @@ function App() {
               </div>
             </section>
           )}
-          {!opened && (
-            <section className="relative flex-1 grid place-items-center border-l border-border/50 bg-background/20 p-10 text-center text-muted-foreground">
-              <div>
-                <Mail className="mx-auto mb-3 h-8 w-8 opacity-40" />
-                <div className="text-sm">Click a message to preview it here</div>
-                <div className="mt-1 text-xs opacity-70">j/k to navigate · Enter to open · c to compose · ⌘K for anything</div>
-              </div>
-            </section>
-          )}
+
         </div>
       </div>
 
