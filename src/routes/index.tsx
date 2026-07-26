@@ -831,6 +831,16 @@ function App() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <Dialog open={digestOpen} onOpenChange={setDigestOpen}>
+        <DialogContent className="glass-strong max-w-lg rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Newspaper className="h-4 w-4 text-primary" /> Daily Digest</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">{digest}</div>
+        </DialogContent>
+      </Dialog>
+
+
       <Dialog open={newFolderOpen} onOpenChange={setNewFolderOpen}>
         <DialogContent className="glass-strong max-w-md">
           <DialogHeader>
