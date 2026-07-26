@@ -14,11 +14,14 @@ export function ThemeApplier() {
     root.style.setProperty("--wallpaper-blur", String(s.wallpaperBlur));
   }, [s.theme, s.panelOpacity, s.panelBlur, s.inboxOpacity, s.inboxBlur, s.wallpaperOpacity, s.wallpaperBlur]);
   return (
-    <div
-      className="app-wallpaper"
-      style={{
-        backgroundImage: s.wallpaperUrl ? `url("${s.wallpaperUrl.replace(/"/g, '\\"')}")` : undefined,
-      }}
-    />
+    <>
+      <div className="app-wallpaper-dim" />
+      <div
+        className="app-wallpaper"
+        style={{
+          backgroundImage: s.wallpaperUrl ? `url("${s.wallpaperUrl.replace(/"/g, '\\"')}")` : undefined,
+        }}
+      />
+    </>
   );
 }
