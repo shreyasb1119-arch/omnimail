@@ -157,6 +157,7 @@ Action variants:
 {"type":"label","n":[...],"labelName":string}
 {"type":"search","query":string}
 {"type":"compose","to":string,"subject":string,"body":string}
+{"type":"schedule","to":string,"subject":string,"body":string,"delayMs":number,"when":string}
 
 Rules:
 - "first N"/"top N" = positions 1..N. "last N" = the final N positions. "all" = every position.
