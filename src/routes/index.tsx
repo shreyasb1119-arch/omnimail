@@ -654,7 +654,55 @@ function App() {
                 </Tooltip>
               </div>
 
+              <div className="flex items-center gap-1">
+                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runRadar} disabled={aiBusy === "radar"}>
+                  {aiBusy === "radar" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Radar className="h-3.5 w-3.5" />} Follow-up Radar
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-[220px] text-xs">
+                    Scans loaded messages and surfaces only the threads still waiting on your reply, most urgent first.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runScout} disabled={aiBusy === "scout"}>
+                  {aiBusy === "scout" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellOff className="h-3.5 w-3.5" />} Unsubscribe Scout
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-[220px] text-xs">
+                    Groups newsletters and automated senders, counts how much space they take, and tells you which to drop.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={() => setQueueOpen(true)}>
+                  <Clock className="h-3.5 w-3.5" /> Scheduled
+                  {scheduled.some((s) => s.status === "pending") && (
+                    <span className="ml-auto rounded-full bg-primary/20 px-1.5 text-[10px] text-primary">
+                      {scheduled.filter((s) => s.status === "pending").length}
+                    </span>
+                  )}
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-[220px] text-xs">
+                    Ask the assistant to "send X an email in 10 minutes" — Gemini drafts it and it goes out on time. Cancel any time here.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
             </div>
+
 
             <div className="mt-auto space-y-2">
               <button onClick={() => setCmdOpen(true)} className="flex w-full items-center gap-2 rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-xs text-muted-foreground transition hover:text-foreground">
