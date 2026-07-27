@@ -40,6 +40,8 @@ const defaultSettings: Settings = {
   panelBlur: 24,
   inboxOpacity: 60,
   inboxBlur: 20,
+  cmdOpacity: 70,
+  cmdBlur: 28,
 };
 
 
