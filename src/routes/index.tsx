@@ -162,6 +162,32 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.clientId]);
 
+  // Stay signed in "forever": proactive silent refresh + refresh on tab focus.
+  useEffect(() => {
+    if (!session || !settings.clientId) return;
+    const renew = async () => {
+      const s = sessionStore.get();
+      if (!s) return;
+      if (Date.now() > s.expiresAt - 10 * 60 * 1000) await refreshSilently();
+    };
+    const iv = window.setInterval(renew, 5 * 60 * 1000);
+    const onVis = () => { if (document.visibilityState === "visible") void renew(); };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("online", onVis);
+    return () => {
+      window.clearInterval(iv);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("online", onVis);
+    };
+  }, [session, settings.clientId]);
+
+  // Background scheduled-send loop.
+  useEffect(() => {
+    if (!session) return;
+    return startScheduler((m) => toast.success(`Scheduled email sent to ${m.to}`));
+  }, [session]);
+
+
   useEffect(() => setAiLabels(getAiLabels()), []);
   useEffect(() => { setSummary(""); setSmartReplies([]); }, [openId]);
 
