@@ -205,6 +205,22 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
               <Slider value={[s.inboxBlur]} min={0} max={60} step={1} onValueChange={([v]) => settingsStore.set({ inboxBlur: v })} />
             </div>
           </section>
+          <Separator />
+          <section className="space-y-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Command palette</h3>
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Palette transparency</span><span>{s.cmdOpacity}%</span>
+              </div>
+              <Slider value={[s.cmdOpacity]} min={0} max={100} step={1} onValueChange={([v]) => settingsStore.set({ cmdOpacity: v })} />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Palette blur</span><span>{s.cmdBlur}px</span>
+              </div>
+              <Slider value={[s.cmdBlur]} min={0} max={60} step={1} onValueChange={([v]) => settingsStore.set({ cmdBlur: v })} />
+            </div>
+          </section>
         </div>
       </SheetContent>
     </Sheet>

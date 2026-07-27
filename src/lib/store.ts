@@ -14,6 +14,8 @@ export interface Settings {
   panelBlur: number;
   inboxOpacity: number;
   inboxBlur: number;
+  cmdOpacity: number;
+  cmdBlur: number;
 }
 
 export interface AuthSession {
@@ -38,6 +40,8 @@ const defaultSettings: Settings = {
   panelBlur: 24,
   inboxOpacity: 60,
   inboxBlur: 20,
+  cmdOpacity: 70,
+  cmdBlur: 28,
 };
 
 

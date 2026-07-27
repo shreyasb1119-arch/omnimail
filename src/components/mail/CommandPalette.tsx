@@ -31,7 +31,7 @@ export function CommandPalette({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl overflow-hidden border-border/60 bg-transparent p-0 shadow-2xl">
-        <div className="glass-strong rounded-2xl">
+        <div className="glass-cmd rounded-2xl">
           <Command className="bg-transparent">
             <CommandInput
               placeholder="Search mail or run a command…"

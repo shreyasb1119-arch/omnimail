@@ -9,6 +9,7 @@ import {
   Inbox, Star, Send, Trash2, PenSquare, Sparkles, Settings, Archive,
   Search, Mail, ShieldAlert, FileText, RefreshCw, Zap, Filter, ArrowLeft,
   Reply, Loader2, Command as CmdIcon, Info, Folder, Plus, MessageSquare, X, Newspaper, ListChecks,
+  Radar, BellOff, Clock,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -27,13 +28,15 @@ import {
 } from "@/lib/gmail";
 import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
 import { useSession, useSettings, sessionStore, getAiLabels, setAiLabel, type AiLabel } from "@/lib/store";
-import { aiTriage, aiSummarize, aiSmartReplies, aiDigest } from "@/lib/ai";
+import { aiTriage, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout } from "@/lib/ai";
 import type { AssistantAction } from "@/lib/ai";
+import { startScheduler, scheduleStore, useScheduled, type ScheduledMessage } from "@/lib/schedule";
 import { ThemeApplier } from "@/components/mail/ThemeApplier";
 import { SettingsDrawer } from "@/components/mail/SettingsDrawer";
 import { Compose, type ComposeInitial } from "@/components/mail/Compose";
 import { CommandPalette, type Cmd } from "@/components/mail/CommandPalette";
 import { AiAssistant } from "@/components/mail/AiAssistant";
+import { Landing } from "@/components/mail/Landing";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -79,25 +82,45 @@ function labelBadge(l?: AiLabel) {
   return <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${m.cls}`}>{m.text}</span>;
 }
 
-// Transform user queries: dates like 10/26/25 or 2025-10-26 → Gmail `before:` search.
+// Parse a single date token into Gmail's YYYY/MM/DD form.
+function parseDateToken(tok: string): string | null {
+  const t = tok.trim();
+  const slash = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (slash) {
+    const [, mm, dd, yy] = slash;
+    const year = yy.length === 2 ? `20${yy}` : yy;
+    return `${year}/${mm.padStart(2, "0")}/${dd.padStart(2, "0")}`;
+  }
+  const iso = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) {
+    const [, y, m, d] = iso;
+    return `${y}/${m.padStart(2, "0")}/${d.padStart(2, "0")}`;
+  }
+  return null;
+}
+
+// Transform user queries:
+//   10/26/25              → before:2025/10/26
+//   10/26/25-10/26/24     → before:2025/10/26 after:2024/10/26
 function transformQuery(raw: string): string {
   const q = raw.trim();
   if (!q) return "";
-  // MM/DD/YY or MM/DD/YYYY
-  const slash = q.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
-  if (slash) {
-    let [_, mm, dd, yy] = slash;
-    const year = yy.length === 2 ? `20${yy}` : yy;
-    return `before:${year}/${mm.padStart(2, "0")}/${dd.padStart(2, "0")}`;
+
+  const range = q.split(/\s*(?:-{1,2}|–|\bto\b)\s*/i).filter(Boolean);
+  if (range.length === 2) {
+    const a = parseDateToken(range[0]);
+    const b = parseDateToken(range[1]);
+    if (a && b) {
+      const [newer, older] = a >= b ? [a, b] : [b, a];
+      return `before:${newer} after:${older}`;
+    }
   }
-  // YYYY-MM-DD
-  const iso = q.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (iso) {
-    const [_, y, m, d] = iso;
-    return `before:${y}/${m.padStart(2, "0")}/${d.padStart(2, "0")}`;
-  }
+
+  const one = parseDateToken(q);
+  if (one) return `before:${one}`;
   return q;
 }
+
 
 function App() {
   const session = useSession();
@@ -122,11 +145,14 @@ function App() {
   const [purging, setPurging] = useState(false);
   const [confirmEmpty, setConfirmEmpty] = useState(false);
   const [cursorIndex, setCursorIndex] = useState(0);
-  const [aiBusy, setAiBusy] = useState<null | "summary" | "replies" | "digest">(null);
+  const [aiBusy, setAiBusy] = useState<null | "summary" | "replies" | "digest" | "tasks" | "radar" | "scout">(null);
   const [summary, setSummary] = useState<string>("");
   const [smartReplies, setSmartReplies] = useState<string[]>([]);
   const [digest, setDigest] = useState<string>("");
   const [digestOpen, setDigestOpen] = useState(false);
+  const [scan, setScan] = useState<{ title: string; text: string } | null>(null);
+  const [queueOpen, setQueueOpen] = useState(false);
+  const scheduled = useScheduled();
   const listRef = useRef<HTMLDivElement>(null);
 
 
@@ -141,6 +167,32 @@ function App() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.clientId]);
+
+  // Stay signed in "forever": proactive silent refresh + refresh on tab focus.
+  useEffect(() => {
+    if (!session || !settings.clientId) return;
+    const renew = async () => {
+      const s = sessionStore.get();
+      if (!s) return;
+      if (Date.now() > s.expiresAt - 10 * 60 * 1000) await refreshSilently();
+    };
+    const iv = window.setInterval(renew, 5 * 60 * 1000);
+    const onVis = () => { if (document.visibilityState === "visible") void renew(); };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("online", onVis);
+    return () => {
+      window.clearInterval(iv);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("online", onVis);
+    };
+  }, [session, settings.clientId]);
+
+  // Background scheduled-send loop.
+  useEffect(() => {
+    if (!session) return;
+    return startScheduler((m) => toast.success(`Scheduled email sent to ${m.to}`));
+  }, [session]);
+
 
   useEffect(() => setAiLabels(getAiLabels()), []);
   useEffect(() => { setSummary(""); setSmartReplies([]); }, [openId]);
@@ -342,6 +394,10 @@ function App() {
           setComposeInitial({ to: a.to, subject: a.subject, body: a.body });
           setComposeOpen(true);
           ok++; summary.push(`Opened compose to ${a.to}`);
+        } else if (a.type === "schedule") {
+          const sendAt = Date.now() + Math.max(5_000, Number(a.delayMs) || 0);
+          scheduleStore.add({ to: a.to, subject: a.subject, body: a.body, sendAt });
+          ok++; summary.push(`Scheduled to ${a.to} (${a.when || new Date(sendAt).toLocaleTimeString()})`);
         }
       } catch (e: any) {
         failed++; summary.push(`✗ ${a.type} failed`);
@@ -411,6 +467,41 @@ function App() {
     finally { setAiBusy(null); }
   };
 
+  const runTasks = async () => {
+    if (!opened) return;
+    setAiBusy("tasks");
+    try {
+      const text = await aiExtractTasks(opened.subject, opened.from, opened.bodyText || opened.snippet);
+      setScan({ title: "Action items", text });
+    } catch (e: any) { toast.error(e.message || "Extraction failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runRadar = async () => {
+    if (!messages.length) return;
+    setAiBusy("radar");
+    try {
+      const text = await aiFollowUpRadar(
+        messages.slice(0, 40).map((m) => ({ from: m.from, subject: m.subject, snippet: m.snippet })),
+      );
+      setScan({ title: "Follow-up Radar", text });
+    } catch (e: any) { toast.error(e.message || "Radar failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runScout = async () => {
+    if (!messages.length) return;
+    setAiBusy("scout");
+    try {
+      const text = await aiUnsubscribeScout(
+        messages.slice(0, 60).map((m) => ({ from: m.from, subject: m.subject, snippet: m.snippet })),
+      );
+      setScan({ title: "Unsubscribe Scout", text });
+    } catch (e: any) { toast.error(e.message || "Scout failed"); }
+    finally { setAiBusy(null); }
+  };
+
+
 
   const commands: Cmd[] = useMemo(() => [
     { id: "compose", label: "Compose", icon: <PenSquare className="h-4 w-4" />, shortcut: "C", action: () => { setComposeInitial(undefined); setComposeOpen(true); }, group: "Actions" },
@@ -419,6 +510,11 @@ function App() {
     { id: "triage", label: "AI Smart Triage", icon: <Sparkles className="h-4 w-4" />, action: runTriage, group: "AI" },
     { id: "purge", label: "AI Auto-Purge Spam", icon: <Zap className="h-4 w-4" />, action: runAutoPurge, group: "AI" },
     { id: "digest", label: "AI Daily Digest", icon: <Newspaper className="h-4 w-4" />, action: runDigest, group: "AI" },
+    { id: "radar", label: "AI Follow-up Radar", icon: <Radar className="h-4 w-4" />, action: runRadar, group: "AI" },
+    { id: "scout", label: "AI Unsubscribe Scout", icon: <BellOff className="h-4 w-4" />, action: runScout, group: "AI" },
+    { id: "tasks", label: "AI Action Items (open email)", icon: <ListChecks className="h-4 w-4" />, action: runTasks, group: "AI" },
+    { id: "queue", label: "Scheduled sends", icon: <Clock className="h-4 w-4" />, action: () => setQueueOpen(true), group: "Actions" },
+
 
     { id: "newfolder", label: "New folder…", icon: <Plus className="h-4 w-4" />, action: () => setNewFolderOpen(true), group: "Actions" },
     { id: "settings", label: "Open Settings", icon: <Settings className="h-4 w-4" />, action: () => setSettingsOpen(true), group: "Actions" },
@@ -427,7 +523,9 @@ function App() {
 
   if (!session) return (
     <>
-      <SignInScreen onOpenSettings={() => setSettingsOpen(true)} />
+      <ThemeApplier />
+      <Toaster position="top-right" richColors />
+      <Landing onOpenSettings={() => setSettingsOpen(true)} />
       <SettingsDrawer open={settingsOpen} onOpenChange={setSettingsOpen} />
     </>
   );
@@ -562,7 +660,55 @@ function App() {
                 </Tooltip>
               </div>
 
+              <div className="flex items-center gap-1">
+                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runRadar} disabled={aiBusy === "radar"}>
+                  {aiBusy === "radar" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Radar className="h-3.5 w-3.5" />} Follow-up Radar
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-[220px] text-xs">
+                    Scans loaded messages and surfaces only the threads still waiting on your reply, most urgent first.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runScout} disabled={aiBusy === "scout"}>
+                  {aiBusy === "scout" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellOff className="h-3.5 w-3.5" />} Unsubscribe Scout
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-[220px] text-xs">
+                    Groups newsletters and automated senders, counts how much space they take, and tells you which to drop.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={() => setQueueOpen(true)}>
+                  <Clock className="h-3.5 w-3.5" /> Scheduled
+                  {scheduled.some((s) => s.status === "pending") && (
+                    <span className="ml-auto rounded-full bg-primary/20 px-1.5 text-[10px] text-primary">
+                      {scheduled.filter((s) => s.status === "pending").length}
+                    </span>
+                  )}
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-[220px] text-xs">
+                    Ask the assistant to "send X an email in 10 minutes" — Gemini drafts it and it goes out on time. Cancel any time here.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
             </div>
+
 
             <div className="mt-auto space-y-2">
               <button onClick={() => setCmdOpen(true)} className="flex w-full items-center gap-2 rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-xs text-muted-foreground transition hover:text-foreground">
@@ -745,7 +891,19 @@ function App() {
                       Generates 3 one-line replies. Click one to open Compose pre-filled with it.
                     </TooltipContent>
                   </Tooltip>
+                  <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={runTasks} disabled={aiBusy === "tasks"}>
+                    {aiBusy === "tasks" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ListChecks className="h-3.5 w-3.5" />} Action items
+                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[240px] text-xs">
+                      Pulls every task, deadline and commitment out of this email into a dated checklist.
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
+
 
                 {summary && (
                   <div className="mb-4 whitespace-pre-wrap rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm">
@@ -840,6 +998,54 @@ function App() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!scan} onOpenChange={(o) => !o && setScan(null)}>
+        <DialogContent className="glass-strong max-w-lg rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> {scan?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">{scan?.text}</div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={queueOpen} onOpenChange={setQueueOpen}>
+        <DialogContent className="glass-strong max-w-lg rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /> Scheduled sends</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+            {scheduled.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                Nothing scheduled. Ask the AI Assistant something like “email sam@acme.com about the deck in 10 minutes”.
+              </p>
+            )}
+            {scheduled.slice().reverse().map((s: ScheduledMessage) => (
+              <div key={s.id} className="rounded-xl border border-border/60 bg-card/40 p-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-foreground">{s.to}</span>
+                  <span className="ml-auto text-muted-foreground">
+                    {s.status === "pending" ? new Date(s.sendAt).toLocaleString() : s.status}
+                  </span>
+                </div>
+                <div className="mt-1 font-medium">{s.subject}</div>
+                <div className="mt-1 line-clamp-2 text-muted-foreground">{s.body}</div>
+                {s.error && <div className="mt-1 text-destructive">{s.error}</div>}
+                <div className="mt-2 flex gap-2">
+                  {s.status === "pending" && (
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => scheduleStore.update(s.id, { status: "cancelled" })}>
+                      Cancel
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground" onClick={() => scheduleStore.remove(s.id)}>
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
 
       <Dialog open={newFolderOpen} onOpenChange={setNewFolderOpen}>
         <DialogContent className="glass-strong max-w-md">
@@ -879,38 +1085,3 @@ function App() {
   );
 }
 
-function SignInScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
-  const settings = useSettings();
-  const [busy, setBusy] = useState(false);
-  const handleSignIn = async () => {
-    if (!settings.clientId) {
-      toast.error("Add your Google OAuth Client ID in Settings first.");
-      onOpenSettings();
-      return;
-    }
-    setBusy(true);
-    try { await signIn(true); } catch (e: any) { toast.error(e.message || "Sign-in failed"); }
-    finally { setBusy(false); }
-  };
-  return (
-    <div className="relative grid min-h-screen place-items-center overflow-hidden">
-      <ThemeApplier />
-      <Toaster position="top-right" richColors />
-      <div className="glass-strong w-full max-w-md rounded-3xl p-10 text-center shadow-2xl">
-        <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-primary/60 shadow-lg">
-          <Mail className="h-6 w-6 text-primary-foreground" />
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Shreyas Mail</h1>
-        <p className="mt-2 text-sm text-muted-foreground">The AI-native email client. Ultra-fast, keyboard-first, beautifully quiet.</p>
-        <div className="mt-6 space-y-2">
-          <Button className="w-full" onClick={handleSignIn} disabled={busy}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Sign in with Google
-          </Button>
-          <Button variant="ghost" className="w-full gap-2" onClick={onOpenSettings}>
-            <Settings className="h-4 w-4" /> {settings.clientId ? "Change settings" : "Configure client ID"}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
