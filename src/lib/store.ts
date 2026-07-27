@@ -14,6 +14,8 @@ export interface Settings {
   panelBlur: number;
   inboxOpacity: number;
   inboxBlur: number;
+  cmdOpacity: number;
+  cmdBlur: number;
 }
 
 export interface AuthSession {
