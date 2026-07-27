@@ -212,6 +212,11 @@
     backdrop-filter: blur(calc(max(var(--panel-blur, 24), 18) * 1px)) saturate(180%);
     border: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
   }
+  .glass-cmd {
+    background-color: color-mix(in oklab, var(--panel) calc(var(--cmd-opacity, 70) * 1%), transparent);
+    backdrop-filter: blur(calc(var(--cmd-blur, 28) * 1px)) saturate(180%);
+    border: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
+  }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { scrollbar-width: none; }
 }
