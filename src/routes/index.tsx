@@ -475,7 +475,9 @@ function App() {
 
   if (!session) return (
     <>
-      <SignInScreen onOpenSettings={() => setSettingsOpen(true)} />
+      <ThemeApplier />
+      <Toaster position="top-right" richColors />
+      <Landing onOpenSettings={() => setSettingsOpen(true)} />
       <SettingsDrawer open={settingsOpen} onOpenChange={setSettingsOpen} />
     </>
   );
