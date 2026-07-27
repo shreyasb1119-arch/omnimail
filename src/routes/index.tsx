@@ -927,38 +927,3 @@ function App() {
   );
 }
 
-function SignInScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
-  const settings = useSettings();
-  const [busy, setBusy] = useState(false);
-  const handleSignIn = async () => {
-    if (!settings.clientId) {
-      toast.error("Add your Google OAuth Client ID in Settings first.");
-      onOpenSettings();
-      return;
-    }
-    setBusy(true);
-    try { await signIn(true); } catch (e: any) { toast.error(e.message || "Sign-in failed"); }
-    finally { setBusy(false); }
-  };
-  return (
-    <div className="relative grid min-h-screen place-items-center overflow-hidden">
-      <ThemeApplier />
-      <Toaster position="top-right" richColors />
-      <div className="glass-strong w-full max-w-md rounded-3xl p-10 text-center shadow-2xl">
-        <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-primary/60 shadow-lg">
-          <Mail className="h-6 w-6 text-primary-foreground" />
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Shreyas Mail</h1>
-        <p className="mt-2 text-sm text-muted-foreground">The AI-native email client. Ultra-fast, keyboard-first, beautifully quiet.</p>
-        <div className="mt-6 space-y-2">
-          <Button className="w-full" onClick={handleSignIn} disabled={busy}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Sign in with Google
-          </Button>
-          <Button variant="ghost" className="w-full gap-2" onClick={onOpenSettings}>
-            <Settings className="h-4 w-4" /> {settings.clientId ? "Change settings" : "Configure client ID"}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
