@@ -164,6 +164,10 @@ Rules:
 - If the user asks for N messages you MUST output exactly N position numbers (unless the list is shorter).
 - Only use positions that exist (1..${context.length}).
 - Dates like 10/26/25 or "before Oct 26" -> single {"type":"search","query":"before:YYYY/MM/DD"}.
+- A range like 10/26/25-10/26/24 -> {"type":"search","query":"before:2025/10/26 after:2024/10/26"}.
+- If the user wants an email SENT LATER ("send X in 10 minutes", "email bob in an hour"), emit a single
+  {"type":"schedule"} action: write the full subject and body yourself, set "delayMs" to the delay in
+  milliseconds, and "when" to a human phrase like "in 10 minutes".
 - "reply" is one short sentence. Return valid JSON only, no markdown fences.`;
 
   const list = context
