@@ -210,7 +210,7 @@ User command: ${command}`;
   const actions: AssistantAction[] = [];
   for (const a of Array.isArray(parsed.actions) ? parsed.actions : []) {
     if (!a || typeof a.type !== "string") continue;
-    if (a.type === "search" || a.type === "compose") {
+    if (a.type === "search" || a.type === "compose" || a.type === "schedule") {
       actions.push(a as AssistantAction);
       continue;
     }
