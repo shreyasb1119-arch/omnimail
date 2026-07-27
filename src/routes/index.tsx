@@ -510,6 +510,11 @@ function App() {
     { id: "triage", label: "AI Smart Triage", icon: <Sparkles className="h-4 w-4" />, action: runTriage, group: "AI" },
     { id: "purge", label: "AI Auto-Purge Spam", icon: <Zap className="h-4 w-4" />, action: runAutoPurge, group: "AI" },
     { id: "digest", label: "AI Daily Digest", icon: <Newspaper className="h-4 w-4" />, action: runDigest, group: "AI" },
+    { id: "radar", label: "AI Follow-up Radar", icon: <Radar className="h-4 w-4" />, action: runRadar, group: "AI" },
+    { id: "scout", label: "AI Unsubscribe Scout", icon: <BellOff className="h-4 w-4" />, action: runScout, group: "AI" },
+    { id: "tasks", label: "AI Action Items (open email)", icon: <ListChecks className="h-4 w-4" />, action: runTasks, group: "AI" },
+    { id: "queue", label: "Scheduled sends", icon: <Clock className="h-4 w-4" />, action: () => setQueueOpen(true), group: "Actions" },
+
 
     { id: "newfolder", label: "New folder…", icon: <Plus className="h-4 w-4" />, action: () => setNewFolderOpen(true), group: "Actions" },
     { id: "settings", label: "Open Settings", icon: <Settings className="h-4 w-4" />, action: () => setSettingsOpen(true), group: "Actions" },
