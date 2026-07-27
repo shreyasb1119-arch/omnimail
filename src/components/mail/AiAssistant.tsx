@@ -197,5 +197,7 @@ function describeAction(a: AssistantAction): string {
     case "label": return `Apply label "${a.labelName}" to ${a.ids.length}`;
     case "search": return `Search: ${a.query}`;
     case "compose": return `Compose to ${a.to} — "${a.subject}"`;
+    case "schedule": return `Schedule email to ${a.to} — "${a.subject}" (${a.when})`;
+    default: return "Unknown action";
   }
 }
