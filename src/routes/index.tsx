@@ -886,7 +886,19 @@ function App() {
                       Generates 3 one-line replies. Click one to open Compose pre-filled with it.
                     </TooltipContent>
                   </Tooltip>
+                  <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={runTasks} disabled={aiBusy === "tasks"}>
+                    {aiBusy === "tasks" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ListChecks className="h-3.5 w-3.5" />} Action items
+                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[240px] text-xs">
+                      Pulls every task, deadline and commitment out of this email into a dated checklist.
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
+
 
                 {summary && (
                   <div className="mb-4 whitespace-pre-wrap rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm">
