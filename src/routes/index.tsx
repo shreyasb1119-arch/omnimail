@@ -466,6 +466,41 @@ function App() {
     finally { setAiBusy(null); }
   };
 
+  const runTasks = async () => {
+    if (!opened) return;
+    setAiBusy("tasks");
+    try {
+      const text = await aiExtractTasks(opened.subject, opened.from, opened.bodyText || opened.snippet);
+      setScan({ title: "Action items", text });
+    } catch (e: any) { toast.error(e.message || "Extraction failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runRadar = async () => {
+    if (!messages.length) return;
+    setAiBusy("radar");
+    try {
+      const text = await aiFollowUpRadar(
+        messages.slice(0, 40).map((m) => ({ from: m.from, subject: m.subject, snippet: m.snippet })),
+      );
+      setScan({ title: "Follow-up Radar", text });
+    } catch (e: any) { toast.error(e.message || "Radar failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runScout = async () => {
+    if (!messages.length) return;
+    setAiBusy("scout");
+    try {
+      const text = await aiUnsubscribeScout(
+        messages.slice(0, 60).map((m) => ({ from: m.from, subject: m.subject, snippet: m.snippet })),
+      );
+      setScan({ title: "Unsubscribe Scout", text });
+    } catch (e: any) { toast.error(e.message || "Scout failed"); }
+    finally { setAiBusy(null); }
+  };
+
+
 
   const commands: Cmd[] = useMemo(() => [
     { id: "compose", label: "Compose", icon: <PenSquare className="h-4 w-4" />, shortcut: "C", action: () => { setComposeInitial(undefined); setComposeOpen(true); }, group: "Actions" },
