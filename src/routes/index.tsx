@@ -79,25 +79,45 @@ function labelBadge(l?: AiLabel) {
   return <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${m.cls}`}>{m.text}</span>;
 }
 
-// Transform user queries: dates like 10/26/25 or 2025-10-26 → Gmail `before:` search.
+// Parse a single date token into Gmail's YYYY/MM/DD form.
+function parseDateToken(tok: string): string | null {
+  const t = tok.trim();
+  const slash = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (slash) {
+    const [, mm, dd, yy] = slash;
+    const year = yy.length === 2 ? `20${yy}` : yy;
+    return `${year}/${mm.padStart(2, "0")}/${dd.padStart(2, "0")}`;
+  }
+  const iso = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) {
+    const [, y, m, d] = iso;
+    return `${y}/${m.padStart(2, "0")}/${d.padStart(2, "0")}`;
+  }
+  return null;
+}
+
+// Transform user queries:
+//   10/26/25              → before:2025/10/26
+//   10/26/25-10/26/24     → before:2025/10/26 after:2024/10/26
 function transformQuery(raw: string): string {
   const q = raw.trim();
   if (!q) return "";
-  // MM/DD/YY or MM/DD/YYYY
-  const slash = q.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
-  if (slash) {
-    let [_, mm, dd, yy] = slash;
-    const year = yy.length === 2 ? `20${yy}` : yy;
-    return `before:${year}/${mm.padStart(2, "0")}/${dd.padStart(2, "0")}`;
+
+  const range = q.split(/\s*(?:-{1,2}|–|\bto\b)\s*/i).filter(Boolean);
+  if (range.length === 2) {
+    const a = parseDateToken(range[0]);
+    const b = parseDateToken(range[1]);
+    if (a && b) {
+      const [newer, older] = a >= b ? [a, b] : [b, a];
+      return `before:${newer} after:${older}`;
+    }
   }
-  // YYYY-MM-DD
-  const iso = q.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (iso) {
-    const [_, y, m, d] = iso;
-    return `before:${y}/${m.padStart(2, "0")}/${d.padStart(2, "0")}`;
-  }
+
+  const one = parseDateToken(q);
+  if (one) return `before:${one}`;
   return q;
 }
+
 
 function App() {
   const session = useSession();
