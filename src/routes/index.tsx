@@ -993,6 +993,54 @@ function App() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!scan} onOpenChange={(o) => !o && setScan(null)}>
+        <DialogContent className="glass-strong max-w-lg rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> {scan?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">{scan?.text}</div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={queueOpen} onOpenChange={setQueueOpen}>
+        <DialogContent className="glass-strong max-w-lg rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /> Scheduled sends</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+            {scheduled.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                Nothing scheduled. Ask the AI Assistant something like “email sam@acme.com about the deck in 10 minutes”.
+              </p>
+            )}
+            {scheduled.slice().reverse().map((s: ScheduledMessage) => (
+              <div key={s.id} className="rounded-xl border border-border/60 bg-card/40 p-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-foreground">{s.to}</span>
+                  <span className="ml-auto text-muted-foreground">
+                    {s.status === "pending" ? new Date(s.sendAt).toLocaleString() : s.status}
+                  </span>
+                </div>
+                <div className="mt-1 font-medium">{s.subject}</div>
+                <div className="mt-1 line-clamp-2 text-muted-foreground">{s.body}</div>
+                {s.error && <div className="mt-1 text-destructive">{s.error}</div>}
+                <div className="mt-2 flex gap-2">
+                  {s.status === "pending" && (
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => scheduleStore.update(s.id, { status: "cancelled" })}>
+                      Cancel
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground" onClick={() => scheduleStore.remove(s.id)}>
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
 
       <Dialog open={newFolderOpen} onOpenChange={setNewFolderOpen}>
         <DialogContent className="glass-strong max-w-md">
