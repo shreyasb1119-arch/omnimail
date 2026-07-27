@@ -264,3 +264,40 @@ export async function aiDigest(
 }
 
 
+
+/** AI Action Extractor — pulls tasks, dates and commitments out of an email. */
+export async function aiExtractTasks(subject: string, from: string, body: string): Promise<string> {
+  const system = `Extract every concrete task, deadline, meeting and commitment from this email.
+Output a plain list, one per line, formatted "• <task> — <due/when or 'no date'>".
+If there is nothing actionable, output exactly "No action items.". No preamble.`;
+  return aiChat(`From: ${from}\nSubject: ${subject}\n\n${body.slice(0, 6000)}`, system);
+}
+
+/** AI Follow-up Radar — finds loaded messages that are still waiting on your reply. */
+export async function aiFollowUpRadar(
+  items: { from: string; subject: string; snippet: string }[],
+): Promise<string> {
+  const system = `You are a follow-up radar. Given a list of emails, identify only the ones that appear to be
+waiting on the reader's reply or action, ordered most urgent first. For each, output
+"<n>. <sender> — <subject> — why it needs a reply (max 12 words)".
+If none need a reply, output exactly "Nothing is waiting on you.". No preamble.`;
+  const list = items.map((m, i) => `${i + 1}. from=${m.from} | ${m.subject} | ${m.snippet}`).join("\n");
+  return aiChat(list, system);
+}
+
+/** AI Unsubscribe Scout — spots recurring senders worth unsubscribing from. */
+export async function aiUnsubscribeScout(
+  items: { from: string; subject: string; snippet: string }[],
+): Promise<string> {
+  const system = `You review an inbox for subscription noise. List the senders that are clearly newsletters,
+promotions or automated marketing, with how many of their messages appear and a one-line verdict:
+"<sender> — <count> msgs — <keep / unsubscribe> — <reason, max 10 words>".
+If the inbox is clean, output exactly "No subscription noise found.". No preamble.`;
+  const list = items.map((m) => `from=${m.from} | ${m.subject} | ${m.snippet}`).join("\n");
+  return aiChat(list, system);
+}
+
+/** Drafts a subject+body for a scheduled send from a short intent. */
+export async function aiDraftScheduled(intent: string, to: string) {
+  return aiWriteEmail({ intent: `Email to ${to}: ${intent}`, tone: "professional" });
+}
