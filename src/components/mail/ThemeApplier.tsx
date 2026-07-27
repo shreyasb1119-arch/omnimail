@@ -12,7 +12,9 @@ export function ThemeApplier() {
     root.style.setProperty("--inbox-blur", String(s.inboxBlur));
     root.style.setProperty("--wallpaper-opacity", String(s.wallpaperOpacity));
     root.style.setProperty("--wallpaper-blur", String(s.wallpaperBlur));
-  }, [s.theme, s.panelOpacity, s.panelBlur, s.inboxOpacity, s.inboxBlur, s.wallpaperOpacity, s.wallpaperBlur]);
+    root.style.setProperty("--cmd-opacity", String(s.cmdOpacity));
+    root.style.setProperty("--cmd-blur", String(s.cmdBlur));
+  }, [s.theme, s.panelOpacity, s.panelBlur, s.inboxOpacity, s.inboxBlur, s.wallpaperOpacity, s.wallpaperBlur, s.cmdOpacity, s.cmdBlur]);
   return (
     <>
       <div className="app-wallpaper-dim" />
