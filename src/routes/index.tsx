@@ -390,6 +390,10 @@ function App() {
           setComposeInitial({ to: a.to, subject: a.subject, body: a.body });
           setComposeOpen(true);
           ok++; summary.push(`Opened compose to ${a.to}`);
+        } else if (a.type === "schedule") {
+          const sendAt = Date.now() + Math.max(5_000, Number(a.delayMs) || 0);
+          scheduleStore.add({ to: a.to, subject: a.subject, body: a.body, sendAt });
+          ok++; summary.push(`Scheduled to ${a.to} (${a.when || new Date(sendAt).toLocaleTimeString()})`);
         }
       } catch (e: any) {
         failed++; summary.push(`✗ ${a.type} failed`);
