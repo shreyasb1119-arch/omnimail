@@ -144,11 +144,14 @@ function App() {
   const [purging, setPurging] = useState(false);
   const [confirmEmpty, setConfirmEmpty] = useState(false);
   const [cursorIndex, setCursorIndex] = useState(0);
-  const [aiBusy, setAiBusy] = useState<null | "summary" | "replies" | "digest">(null);
+  const [aiBusy, setAiBusy] = useState<null | "summary" | "replies" | "digest" | "tasks" | "radar" | "scout">(null);
   const [summary, setSummary] = useState<string>("");
   const [smartReplies, setSmartReplies] = useState<string[]>([]);
   const [digest, setDigest] = useState<string>("");
   const [digestOpen, setDigestOpen] = useState(false);
+  const [scan, setScan] = useState<{ title: string; text: string } | null>(null);
+  const [queueOpen, setQueueOpen] = useState(false);
+  const scheduled = useScheduled();
   const listRef = useRef<HTMLDivElement>(null);
 
 
