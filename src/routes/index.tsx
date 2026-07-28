@@ -689,6 +689,8 @@ function App() {
   ];
 
   const READER_TOOLS = [
+    { id: "replydraft", label: "Draft full reply", icon: Wand2, run: runReplyDraft, busy: aiBusy === "reply",
+      info: "Writes a complete, ready-to-send reply that answers every question in the email, then opens it in Compose." },
     { id: "summary", label: "Summarize", icon: ListChecks, run: runSummarize, busy: aiBusy === "summary",
       info: "Condenses this email into 3 bullets plus the single action it asks of you." },
     { id: "replies", label: "Smart replies", icon: MessageSquare, run: runSmartReplies, busy: aiBusy === "replies",
