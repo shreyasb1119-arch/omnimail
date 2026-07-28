@@ -417,3 +417,81 @@ Reference senders and subjects. Maximum 12 bullets total. No preamble.`;
   const list = items.map((m, i) => `${i + 1}. from=${m.from} | ${m.subject} | ${m.snippet}`).join("\n");
   return aiChat(list, system);
 }
+
+/* ------------------------------------------------------------------ */
+/* Natural-language email finder                                       */
+/* ------------------------------------------------------------------ */
+
+const NL_HINT =
+  /\b(find|show|get|search for|look for|who|what|emails? (from|about|with)|my|all|oldest|newest|latest|last week|last month|yesterday|today|unread|attachment|bigger|larger|recent)\b/i;
+
+/** Heuristic: is the user talking to the AI, or typing a raw query? */
+export function looksNaturalLanguage(input: string): boolean {
+  const q = input.trim();
+  if (!q) return false;
+  // Raw Gmail operators or a bare date/range => plain search.
+  if (/\b(from|to|subject|label|has|before|after|older_than|newer_than|is|in|filename):/i.test(q)) return false;
+  if (/^\s*[\d/.-]+\s*$/.test(q)) return false;
+  return q.split(/\s+/).length >= 3 && NL_HINT.test(q);
+}
+
+/** Turns "find my oldest emails from spotify" into a real Gmail search query. */
+export async function aiNaturalSearch(
+  request: string,
+  labels: string[] = [],
+): Promise<{ query: string; sort: "date" | "oldest" | "sender"; explain: string }> {
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, "/");
+  const system = `You convert natural language into Gmail search queries.
+Today is ${today}. Available user labels: ${labels.join(", ") || "(none)"}.
+Return ONLY compact JSON: {"query": string, "sort": "date"|"oldest"|"sender", "explain": string}
+Rules:
+- Use real Gmail operators: from:, to:, subject:, label:, in:, is:unread, is:starred, has:attachment,
+  before:YYYY/MM/DD, after:YYYY/MM/DD, older_than:7d, newer_than:1m, larger:5M.
+- "oldest" requests -> set "sort":"oldest" (and no date operator unless one was named).
+- "from spotify" -> from:spotify. "in my inbox" -> in:inbox.
+- Keep the query short; never invent senders that were not mentioned.
+- "explain" is a max-8-word description of the filter. No markdown fences.`;
+  const raw = await aiChat(request, system);
+  const cleaned = raw.replace(/```json|```/g, "").trim();
+  const s = cleaned.indexOf("{");
+  const e = cleaned.lastIndexOf("}");
+  try {
+    const p = JSON.parse(s >= 0 ? cleaned.slice(s, e + 1) : cleaned);
+    return {
+      query: String(p.query || "").trim(),
+      sort: p.sort === "oldest" || p.sort === "sender" ? p.sort : "date",
+      explain: String(p.explain || "").trim(),
+    };
+  } catch {
+    return { query: request, sort: "date", explain: "" };
+  }
+}
+
+/** AI Reply Draft — writes a full, ready-to-send reply to the open email. */
+export async function aiReplyDraft(subject: string, from: string, body: string) {
+  const system = `Write a complete reply to the email below. Match the sender's register, stay concise and
+specific, answer every question asked, and end with a clear next step. Return ONLY the reply body — no
+subject line, no greeting placeholders like [Name], no preamble.`;
+  return aiChat(`From: ${from}\nSubject: ${subject}\n\n${body.slice(0, 6000)}`, system);
+}
+
+/** AI VIP Radar — finds the people who actually matter in the loaded inbox. */
+export async function aiVipScan(items: { from: string; subject: string; snippet: string }[]) {
+  const system = `Identify the senders that look like real, important humans (colleagues, clients, family,
+recruiters, money) as opposed to automated mail. Output at most 8 lines:
+"<sender> — <why they matter, max 10 words>". If none, output exactly "No VIP senders in view.". No preamble.`;
+  return aiChat(items.map((m) => `from=${m.from} | ${m.subject} | ${m.snippet}`).join("\n"), system);
+}
+
+/** AI Inbox Report — a stats-style read on the mail currently loaded. */
+export async function aiInboxReport(items: { from: string; subject: string; snippet: string }[]) {
+  const system = `Write a short analytics-style report on this inbox. Output exactly these sections, one short
+line or up to 3 bullets each:
+Volume:
+Top senders:
+Themes:
+Time sinks:
+Recommendation:
+No preamble.`;
+  return aiChat(items.map((m, i) => `${i + 1}. from=${m.from} | ${m.subject} | ${m.snippet}`).join("\n"), system);
+}
