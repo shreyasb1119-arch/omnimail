@@ -449,8 +449,10 @@ function App() {
     const list = [...messages];
     if (settings.sortBy === "sender") list.sort((a, b) => senderName(a).localeCompare(senderName(b)));
     else if (settings.sortBy === "unread") list.sort((a, b) => Number(b.unread) - Number(a.unread));
+    else if (oldestFirst) list.sort((a, b) => a.date - b.date);
     return list;
-  }, [messages, settings.sortBy]);
+  }, [messages, settings.sortBy, oldestFirst]);
+
 
   // Keyboard shortcuts
   useEffect(() => {
