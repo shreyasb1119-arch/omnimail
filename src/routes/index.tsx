@@ -745,8 +745,60 @@ function App() {
     <TooltipProvider delayDuration={200}>
       <ThemeApplier />
       <Toaster position="top-right" richColors />
-      <div className="relative h-screen w-screen overflow-hidden p-3 text-foreground">
-        <div className="flex h-full w-full gap-3 overflow-hidden">
+      <div className="relative flex h-screen w-screen flex-col gap-3 overflow-hidden p-3 text-foreground">
+        {/* Floating omni search — plain search or natural language, auto-detected */}
+        <div className="animate-drop flex w-full justify-center">
+          <div className="glass-cmd flex w-full max-w-2xl items-center gap-2 rounded-full px-4 py-2 shadow-xl ring-1 ring-border/40 transition focus-within:ring-2 focus-within:ring-primary/40">
+            {searching ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
+            ) : looksNaturalLanguage(query) ? (
+              <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+            ) : (
+              <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+            )}
+            <Input
+              id="search-input"
+              placeholder="Search, type 10/26/25, or ask — “find my oldest emails from Spotify”"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") void runSearch(); }}
+              className="h-8 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
+              aria-label="Search mail or ask the AI"
+            />
+            {query && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => void runSearch(true)}
+                    aria-label="Ask AI to find these emails"
+                    className="press rounded-full p-1 text-primary hover:bg-primary/10"
+                  >
+                    <Wand2 className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[220px] text-xs">
+                  Force AI search — describe what you want and it builds the Gmail query for you.
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {(activeQuery || query) && (
+              <button
+                onClick={() => { setQuery(""); setActiveQuery(""); setSearchExplain(""); setOldestFirst(false); }}
+                aria-label="Clear search"
+                className="press rounded-full p-1 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <div className="mx-1 h-5 w-px bg-border/60" />
+            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full" onClick={load} aria-label="Refresh messages">
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex min-h-0 w-full flex-1 gap-3 overflow-hidden">
+
           {/* Sidebar */}
           <aside className="glass no-scrollbar flex w-64 shrink-0 flex-col overflow-y-auto rounded-2xl px-3 py-4 shadow-xl">
             <div className="mb-5 flex items-center gap-2.5 px-1">
