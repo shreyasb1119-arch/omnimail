@@ -5,9 +5,11 @@ import {
   Mail, Sparkles, Zap, Filter, Newspaper, MessageSquare, Clock, ListChecks,
   Radar, BellOff, Search, Folder, Command, Keyboard, Palette, Image as ImageIcon,
   Trash2, ShieldAlert, CheckCircle2, ArrowRight, Settings, Lock, Gauge,
+  Sun, Moon, Languages, CalendarClock, Paperclip, Download,
 } from "lucide-react";
 import { signIn } from "@/lib/gauth";
-import { useSettings } from "@/lib/store";
+import { useSettings, settingsStore, themeMode, DEFAULT_DARK, DEFAULT_LIGHT } from "@/lib/store";
+import { DemoInbox } from "@/components/mail/DemoInbox";
 
 const AI_FEATURES = [
   { icon: MessageSquare, title: "Chat Assistant that acts", body: "Type “star the first 10 messages” or “archive everything from LinkedIn.” It builds a plan, you confirm, it executes on your real inbox." },
@@ -19,6 +21,10 @@ const AI_FEATURES = [
   { icon: Zap, title: "Auto-Purge", body: "Cold outreach and promo junk get swept to Trash automatically — reversible, never permanent." },
   { icon: Newspaper, title: "Daily Digest", body: "A one-screen brief of your inbox, grouped by theme with urgent items first." },
   { icon: Sparkles, title: "AI Writer + Smart Replies", body: "Draft from an intent, rewrite the tone, autocomplete mid-sentence, or fire off a one-tap reply." },
+  { icon: Gauge, title: "Tone & Intent Read", body: "Tells you how the sender actually feels, how urgent it really is, what they're really asking, and what breaks if you ignore it." },
+  { icon: CalendarClock, title: "Meeting Extractor", body: "Pulls a calendar-ready event out of any email — title, time, place, attendees, and what to prepare." },
+  { icon: Languages, title: "Instant Translate", body: "Read any email in your language without leaving the thread, subject line included." },
+  { icon: Paperclip, title: "Attachment Brief", body: "Explains what the attached files are, which one actually matters, and the single action to take." },
 ];
 
 const CORE_FEATURES = [
@@ -34,6 +40,9 @@ const CORE_FEATURES = [
   { icon: Lock, title: "Nothing stored", body: "Your mail never touches our servers. Tokens live in your browser and refresh silently." },
   { icon: ShieldAlert, title: "Spam that stays gone", body: "Triage-driven purge learns what you never want to see again." },
   { icon: Mail, title: "Three-pane, on demand", body: "The reader only exists when you open something — the list gets the full screen otherwise." },
+  { icon: Download, title: "Files you can actually find", body: "Attachments get their own card grid with one-tap download, or save any file or email straight to PDF." },
+  { icon: Sun, title: "17 themes, light and dark", body: "Eleven dark presets, five light ones, and a one-tap toggle right here on this page." },
+  { icon: Sparkles, title: "AI menu, not AI clutter", body: "Every AI tool lives behind one button that drops down when you want it and disappears when you don't." },
 ];
 
 const VS_OTHERS = [
