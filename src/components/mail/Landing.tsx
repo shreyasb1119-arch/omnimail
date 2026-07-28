@@ -123,7 +123,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       </header>
 
       {/* Hero */}
-      <section className="mx-auto max-w-4xl px-6 pb-16 pt-20 text-center">
+      <section className="reveal mx-auto max-w-4xl px-6 pb-16 pt-20 text-center">
         <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1 text-xs text-muted-foreground">
           <Sparkles className="h-3 w-3 animate-float text-primary" /> Powered by Gmail + Gemini
         </div>
@@ -147,13 +147,14 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
           </Button>
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
-          Free, runs entirely in your browser. Bring your own Google Client ID in{" "}
+          Free, and it runs entirely in your browser. No setup required — advanced users can add their own
+          Google Client ID in{" "}
           <button onClick={onOpenSettings} className="underline underline-offset-2 hover:text-foreground">Setup</button>.
         </p>
       </section>
 
       {/* Interactive demo */}
-      <section className="mx-auto max-w-6xl px-6 pb-16">
+      <section className="reveal mx-auto max-w-6xl px-6 pb-16">
         <div className="mb-6 text-center">
           <h2 className="text-3xl font-semibold tracking-tight">Try it right here</h2>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -167,7 +168,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       </section>
 
       {/* What others can't do */}
-      <section className="mx-auto max-w-5xl px-6 pb-16">
+      <section className="reveal mx-auto max-w-5xl px-6 pb-16">
         <div className="glass rounded-3xl p-8 shadow-xl">
           <h2 className="text-2xl font-semibold tracking-tight">What other email apps can't do</h2>
           <ul className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -182,7 +183,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       </section>
 
       {/* Date range highlight */}
-      <section className="mx-auto max-w-5xl px-6 pb-16">
+      <section className="reveal mx-auto max-w-5xl px-6 pb-16">
         <div className="glass grid gap-6 rounded-3xl p-8 shadow-xl md:grid-cols-2 md:items-center">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Type a date. Or two.</h2>
@@ -209,7 +210,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       </section>
 
       {/* AI features */}
-      <section className="mx-auto max-w-6xl px-6 pb-16">
+      <section className="reveal mx-auto max-w-6xl px-6 pb-16">
         <div className="mb-6 text-center">
           <h2 className="text-3xl font-semibold tracking-tight">Thirteen AI features, not one chat box</h2>
           <p className="mt-2 text-sm text-muted-foreground">Every one of them works on your live mail.</p>
@@ -228,7 +229,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       </section>
 
       {/* Core features */}
-      <section className="mx-auto max-w-6xl px-6 pb-16">
+      <section className="reveal mx-auto max-w-6xl px-6 pb-16">
         <div className="mb-6 text-center">
           <h2 className="text-3xl font-semibold tracking-tight">And the fundamentals, done properly</h2>
         </div>
@@ -245,7 +246,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       </section>
 
       {/* CTA */}
-      <section className="mx-auto max-w-3xl px-6 pb-20">
+      <section className="reveal mx-auto max-w-3xl px-6 pb-20">
         <div className="glass-strong rounded-3xl p-10 text-center shadow-2xl">
           <h2 className="text-2xl font-semibold tracking-tight">Your inbox, finally quiet</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
