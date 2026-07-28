@@ -31,6 +31,7 @@ import { useSession, useSettings, sessionStore, getAiLabels, setAiLabel, type Ai
 import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief } from "@/lib/ai";
 import type { AssistantAction } from "@/lib/ai";
 import { startScheduler, scheduleStore, useScheduled, type ScheduledMessage } from "@/lib/schedule";
+import { printMessageAsPdf, printImageAsPdf, printTextAsPdf } from "@/lib/printpdf";
 import { ThemeApplier } from "@/components/mail/ThemeApplier";
 import { SettingsDrawer } from "@/components/mail/SettingsDrawer";
 import { Compose, type ComposeInitial } from "@/components/mail/Compose";
@@ -515,6 +516,46 @@ function App() {
     finally { setAiBusy(null); }
   };
 
+  const runTranslate = async () => {
+    if (!opened) return;
+    setAiBusy("translate");
+    try {
+      const text = await aiTranslate(opened.subject, opened.bodyText || opened.snippet, settings.translateTo || "English");
+      setScan({ title: `Translated to ${settings.translateTo || "English"}`, text });
+    } catch (e: any) { toast.error(e.message || "Translation failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runTone = async () => {
+    if (!opened) return;
+    setAiBusy("tone");
+    try {
+      const text = await aiToneRead(opened.subject, opened.from, opened.bodyText || opened.snippet);
+      setScan({ title: "Tone & intent", text });
+    } catch (e: any) { toast.error(e.message || "Tone read failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runMeeting = async () => {
+    if (!opened) return;
+    setAiBusy("meeting");
+    try {
+      const text = await aiMeetingExtract(opened.subject, opened.from, opened.bodyText || opened.snippet);
+      setScan({ title: "Meeting details", text });
+    } catch (e: any) { toast.error(e.message || "Meeting extract failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runAttachmentBrief = async () => {
+    if (!opened || !opened.attachments.length) { toast.error("No attachments on this email"); return; }
+    setAiBusy("files");
+    try {
+      const text = await aiAttachmentBrief(opened.subject, opened.from, opened.attachments);
+      setScan({ title: "Attachment brief", text });
+    } catch (e: any) { toast.error(e.message || "Attachment brief failed"); }
+    finally { setAiBusy(null); }
+  };
+
   const pendingScheduled = scheduled.filter((s) => s.status === "pending").length;
 
   const AI_TOOLS = [
@@ -532,6 +573,25 @@ function App() {
       info: "Groups newsletters and automated senders, counts how much space they take, and tells you which to drop." },
     { id: "queue", label: "Scheduled", icon: Clock, run: () => setQueueOpen(true), busy: false, badge: pendingScheduled,
       info: "Ask the assistant to \"send X an email in 10 minutes\" — Gemini drafts it and it goes out on time. Cancel any time here." },
+  ];
+
+  const READER_TOOLS = [
+    { id: "summary", label: "Summarize", icon: ListChecks, run: runSummarize, busy: aiBusy === "summary",
+      info: "Condenses this email into 3 bullets plus the single action it asks of you." },
+    { id: "replies", label: "Smart replies", icon: MessageSquare, run: runSmartReplies, busy: aiBusy === "replies",
+      info: "Generates 3 one-line replies. Click one to open Compose pre-filled with it." },
+    { id: "tasks", label: "Action items", icon: ListChecks, run: runTasks, busy: aiBusy === "tasks",
+      info: "Pulls every task, deadline and commitment out of this email into a dated checklist." },
+    { id: "tone", label: "Tone read", icon: Gauge, run: runTone, busy: aiBusy === "tone",
+      info: "Tells you the sender's real tone, how urgent it truly is, what they're actually asking, and what breaks if you ignore it." },
+    { id: "meeting", label: "Meeting extract", icon: CalendarClock, run: runMeeting, busy: aiBusy === "meeting",
+      info: "Finds any proposed call or event and lays it out calendar-ready: title, time, place, attendees and prep." },
+    { id: "translate", label: "Translate", icon: Languages, run: runTranslate, busy: aiBusy === "translate",
+      info: "Rewrites the subject and body in your language without leaving the thread." },
+    { id: "files", label: "Attachment brief", icon: Paperclip, run: runAttachmentBrief, busy: aiBusy === "files",
+      info: "Explains what the attached files are, which one actually matters, and the single action to take." },
+    { id: "pdf", label: "Save as PDF", icon: FileText, run: () => opened && printMessageAsPdf({ subject: opened.subject, from: opened.from, to: opened.to, date: new Date(opened.date).toLocaleString(), html: opened.bodyHtml, text: opened.bodyText }), busy: false,
+      info: "Exports this email — headers and body — as a clean PDF via your browser's print dialog." },
   ];
 
 
