@@ -631,7 +631,39 @@ function App() {
     finally { setAiBusy(null); }
   };
 
+  const runVip = async () => {
+    if (!messages.length) return;
+    setAiBusy("vip");
+    try {
+      const text = await aiVipScan(messages.slice(0, 40).map((m) => ({ from: m.from, subject: m.subject, snippet: m.snippet })));
+      setScan({ title: "VIP radar", text });
+    } catch (e: any) { toast.error(e.message || "VIP radar failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runReport = async () => {
+    if (!messages.length) return;
+    setAiBusy("report");
+    try {
+      const text = await aiInboxReport(messages.slice(0, 40).map((m) => ({ from: m.from, subject: m.subject, snippet: m.snippet })));
+      setScan({ title: "Inbox report", text });
+    } catch (e: any) { toast.error(e.message || "Inbox report failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runReplyDraft = async () => {
+    if (!opened) return;
+    setAiBusy("reply");
+    try {
+      const body = await aiReplyDraft(opened.subject, opened.from, opened.bodyText || opened.snippet);
+      setComposeInitial({ to: opened.fromEmail, subject: `Re: ${opened.subject}`, body });
+      setComposeOpen(true);
+    } catch (e: any) { toast.error(e.message || "Reply draft failed"); }
+    finally { setAiBusy(null); }
+  };
+
   const pendingScheduled = scheduled.filter((s) => s.status === "pending").length;
+
 
   const AI_TOOLS = [
     { id: "triage", label: "Smart Triage", icon: Filter, run: runTriage, busy: triaging, badge: 0,
