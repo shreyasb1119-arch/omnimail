@@ -9,7 +9,7 @@ import {
   Inbox, Star, Send, Trash2, PenSquare, Sparkles, Settings, Archive,
   Search, Mail, ShieldAlert, FileText, RefreshCw, Zap, Filter, ArrowLeft,
   Reply, Loader2, Command as CmdIcon, Info, Folder, Plus, MessageSquare, X, Newspaper, ListChecks,
-  Radar, BellOff, Clock,
+  Radar, BellOff, Clock, ChevronDown, Gauge, Languages, CalendarClock, Paperclip, Download,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -28,7 +28,7 @@ import {
 } from "@/lib/gmail";
 import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
 import { useSession, useSettings, sessionStore, getAiLabels, setAiLabel, type AiLabel } from "@/lib/store";
-import { aiTriage, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout } from "@/lib/ai";
+import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief } from "@/lib/ai";
 import type { AssistantAction } from "@/lib/ai";
 import { startScheduler, scheduleStore, useScheduled, type ScheduledMessage } from "@/lib/schedule";
 import { ThemeApplier } from "@/components/mail/ThemeApplier";
@@ -145,7 +145,9 @@ function App() {
   const [purging, setPurging] = useState(false);
   const [confirmEmpty, setConfirmEmpty] = useState(false);
   const [cursorIndex, setCursorIndex] = useState(0);
-  const [aiBusy, setAiBusy] = useState<null | "summary" | "replies" | "digest" | "tasks" | "radar" | "scout">(null);
+  const [aiBusy, setAiBusy] = useState<null | "summary" | "replies" | "digest" | "tasks" | "radar" | "scout" | "priority" | "translate" | "tone" | "meeting" | "files">(null);
+  const [aiMenuOpen, setAiMenuOpen] = useState(false);
+  const [readerAiOpen, setReaderAiOpen] = useState(false);
   const [summary, setSummary] = useState<string>("");
   const [smartReplies, setSmartReplies] = useState<string[]>([]);
   const [digest, setDigest] = useState<string>("");
