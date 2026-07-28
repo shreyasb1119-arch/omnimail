@@ -1,4 +1,4 @@
-# Shreyas Mail
+# Omni Mail
 
 > An AI-native Gmail client with smart triage, auto-purge, an assistant that acts on your inbox, AI scheduled send, and fully tunable glass themes. Runs entirely in your browser.
 

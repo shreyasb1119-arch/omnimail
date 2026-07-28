@@ -155,7 +155,7 @@ export function Compose({
             </Tabs>
           </div>
           <div className="flex items-center justify-between border-t border-border/60 px-6 py-3">
-            <span className="text-xs text-muted-foreground">Shreyas Mail · AI-powered</span>
+            <span className="text-xs text-muted-foreground">Omni Mail · AI-powered</span>
             <div className="flex gap-2">
               <Button variant="ghost" onClick={() => onOpenChange(false)}>Discard</Button>
               <Button onClick={send} disabled={sending}>

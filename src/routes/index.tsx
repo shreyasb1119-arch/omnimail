@@ -43,9 +43,9 @@ import { Landing } from "@/components/mail/Landing";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Shreyas Mail — AI-native email" },
+      { title: "Omni Mail — AI-native email" },
       { name: "description", content: "Ultra-sleek Apple-esque Gmail client with AI writer, smart triage, folders, and a chat assistant that acts on your inbox." },
-      { property: "og:title", content: "Shreyas Mail — AI-native email" },
+      { property: "og:title", content: "Omni Mail — AI-native email" },
       { property: "og:description", content: "Ultra-sleek Apple-esque Gmail client with AI writer, smart triage, folders, and a chat assistant that acts on your inbox." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -693,7 +693,7 @@ function App() {
               </div>
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold tracking-tight">
-                  {session.profile.name || "Shreyas Mail"}
+                  {session.profile.name || "Omni Mail"}
                 </div>
                 <div className="truncate text-[10px] text-muted-foreground">{session.profile.email}</div>
               </div>

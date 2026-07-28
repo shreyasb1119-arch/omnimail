@@ -49,10 +49,10 @@ const CORE_FEATURES = [
 ];
 
 const VS_OTHERS = [
-  "Other clients let you search a date. Shreyas Mail lets you search a range by typing it.",
-  "Other clients schedule a send. Shreyas Mail writes the email, then schedules the send.",
-  "Other clients have an AI sidebar. Shreyas Mail's assistant actually mutates your inbox after you confirm.",
-  "Other clients pick a theme for you. Shreyas Mail hands you blur, opacity and wallpaper controls per pane.",
+  "Other clients let you search a date. Omni Mail lets you search a range by typing it.",
+  "Other clients schedule a send. Omni Mail writes the email, then schedules the send.",
+  "Other clients have an AI sidebar. Omni Mail's assistant actually mutates your inbox after you confirm.",
+  "Other clients pick a theme for you. Omni Mail hands you blur, opacity and wallpaper controls per pane.",
 ];
 
 export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
@@ -100,7 +100,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
           <div className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
             <Mail className="h-4 w-4" />
           </div>
-          <span className="text-sm font-semibold tracking-tight">Shreyas Mail</span>
+          <span className="text-sm font-semibold tracking-tight">Omni Mail</span>
           <div className="ml-auto flex items-center gap-1">
             <button
               onClick={toggleMode}
@@ -131,13 +131,13 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
           <Sparkles className="h-3 w-3 animate-float text-primary" /> Powered by Gmail + Gemini
         </div>
         <h1 className="text-balance text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
-          Shreyas Mail — email that does the work
+          Omni Mail — email that does the work
           <span className="block bg-gradient-to-r from-primary to-primary/50 bg-clip-text text-transparent">
             before you open it
           </span>
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-balance text-base leading-relaxed text-muted-foreground">
-          Shreyas Mail sits on top of your real Gmail and adds the things every other client
+          Omni Mail sits on top of your real Gmail and adds the things every other client
           refuses to: an assistant that acts on your inbox, AI that drafts and schedules sends
           on a timer, range-based date search, and glass you can tune pixel by pixel.
         </p>
@@ -161,7 +161,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
         <div className="mb-6 text-center">
           <h2 className="text-3xl font-semibold tracking-tight">Try it right here</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            A real, clickable Shreyas Mail. Open a message, star it, run any AI tool —
+            A real, clickable Omni Mail. Open a message, star it, run any AI tool —
             it all works on this page before you ever sign in.
           </p>
         </div>
@@ -267,7 +267,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       </section>
 
       <footer className="border-t border-border/40 py-8 text-center text-xs text-muted-foreground">
-        Shreyas Mail · Built on the Gmail API · Your mail never leaves your browser
+        Omni Mail · Built on the Gmail API · Your mail never leaves your browser
       </footer>
     </div>
   );
