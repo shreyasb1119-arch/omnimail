@@ -37,6 +37,7 @@ export interface Settings {
   geminiKey: string;
   theme: Theme;
   avatarUrl: string;
+  translateTo: string;
   wallpaperUrl: string;
   wallpaperOpacity: number;
   wallpaperBlur: number;
@@ -63,6 +64,7 @@ const defaultSettings: Settings = {
   geminiKey: "",
   theme: "superhuman",
   avatarUrl: "",
+  translateTo: "English",
   wallpaperUrl: "",
   wallpaperOpacity: 40,
   wallpaperBlur: 0,
