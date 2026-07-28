@@ -131,7 +131,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
           <Sparkles className="h-3 w-3 animate-float text-primary" /> Powered by Gmail + Gemini
         </div>
         <h1 className="text-balance text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
-          Email that does the work
+          Shreyas Mail — email that does the work
           <span className="block bg-gradient-to-r from-primary to-primary/50 bg-clip-text text-transparent">
             before you open it
           </span>

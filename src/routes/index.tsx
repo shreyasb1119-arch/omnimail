@@ -832,7 +832,7 @@ function App() {
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={load}>
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={load} aria-label="Refresh messages">
                 <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               </Button>
             </header>
@@ -911,7 +911,7 @@ function App() {
                           });
                         }}
                       />
-                      <button onClick={(e) => { e.stopPropagation(); doStar(m.id, !m.starred); }} className="text-muted-foreground hover:text-primary">
+                      <button onClick={(e) => { e.stopPropagation(); doStar(m.id, !m.starred); }} aria-label={m.starred ? "Unstar message" : "Star message"} className="text-muted-foreground hover:text-primary">
                         <Star className={`h-3.5 w-3.5 ${m.starred ? "fill-primary text-primary" : ""}`} />
                       </button>
                     </div>
@@ -939,7 +939,7 @@ function App() {
             <section className="glass-inbox no-scrollbar animate-in-up relative flex-1 overflow-y-auto rounded-2xl shadow-xl">
               <div className="mx-auto max-w-3xl px-8 py-8">
                 <div className="mb-4 flex flex-wrap items-center gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => setOpenId(null)}><ArrowLeft className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => setOpenId(null)} aria-label="Back to message list"><ArrowLeft className="h-4 w-4" /></Button>
                   <Button size="sm" variant="ghost" onClick={() => doArchive([opened.id])}><Archive className="h-4 w-4" /> Archive</Button>
                   <Button size="sm" variant="ghost" className="text-destructive" onClick={() => doTrash([opened.id])}><Trash2 className="h-4 w-4" /> Trash</Button>
                   {folder === "TRASH" && (
