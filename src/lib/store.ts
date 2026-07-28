@@ -67,7 +67,10 @@ export interface Settings {
   inboxBlur: number;
   cmdOpacity: number;
   cmdBlur: number;
+  sortBy: SortBy;
 }
+
+export type SortBy = "date" | "sender" | "unread";
 
 export interface AuthSession {
   accessToken: string;
@@ -94,6 +97,7 @@ const defaultSettings: Settings = {
   inboxBlur: 20,
   cmdOpacity: 70,
   cmdBlur: 28,
+  sortBy: "date",
 };
 
 
