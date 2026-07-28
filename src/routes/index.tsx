@@ -414,6 +414,16 @@ function App() {
     };
   };
 
+  const senderName = (m: ParsedMessage) =>
+    (m.from.split("<")[0].replace(/"/g, "").trim() || m.fromEmail).toLowerCase();
+
+  const viewMessages = useMemo(() => {
+    const list = [...messages];
+    if (settings.sortBy === "sender") list.sort((a, b) => senderName(a).localeCompare(senderName(b)));
+    else if (settings.sortBy === "unread") list.sort((a, b) => Number(b.unread) - Number(a.unread));
+    return list;
+  }, [messages, settings.sortBy]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -434,16 +444,6 @@ function App() {
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [viewMessages, cursorIndex, openMessage]);
-
-  const senderName = (m: ParsedMessage) =>
-    (m.from.split("<")[0].replace(/"/g, "").trim() || m.fromEmail).toLowerCase();
-
-  const viewMessages = useMemo(() => {
-    const list = [...messages];
-    if (settings.sortBy === "sender") list.sort((a, b) => senderName(a).localeCompare(senderName(b)));
-    else if (settings.sortBy === "unread") list.sort((a, b) => Number(b.unread) - Number(a.unread));
-    return list;
-  }, [messages, settings.sortBy]);
 
   const opened = messages.find((m) => m.id === openId) || null;
   const avatarSrc = settings.avatarUrl || session?.profile.picture || "";
