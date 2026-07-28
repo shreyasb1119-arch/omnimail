@@ -32,6 +32,14 @@ export interface GmailMessageMeta {
   payload?: any;
 }
 
+export interface Attachment {
+  attachmentId: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  inline: boolean;
+}
+
 export interface ParsedMessage {
   id: string;
   threadId: string;
@@ -46,6 +54,7 @@ export interface ParsedMessage {
   bodyHtml: string;
   unread: boolean;
   starred: boolean;
+  attachments: Attachment[];
 }
 
 function decodeB64(str: string) {
@@ -66,10 +75,26 @@ function decodeB64(str: string) {
   }
 }
 
-function walkParts(payload: any, out: { text: string; html: string }) {
+function walkParts(
+  payload: any,
+  out: { text: string; html: string; attachments: Attachment[] },
+) {
   if (!payload) return;
   const mime = payload.mimeType || "";
-  if (payload.body?.data) {
+  const filename = payload.filename || "";
+  const disposition =
+    (payload.headers || []).find((h: any) => h.name?.toLowerCase() === "content-disposition")
+      ?.value || "";
+
+  if (filename && payload.body?.attachmentId) {
+    out.attachments.push({
+      attachmentId: payload.body.attachmentId,
+      filename,
+      mimeType: mime || "application/octet-stream",
+      size: Number(payload.body.size || 0),
+      inline: /inline/i.test(disposition),
+    });
+  } else if (payload.body?.data) {
     const decoded = decodeB64(payload.body.data);
     if (mime === "text/plain" && !out.text) out.text = decoded;
     else if (mime === "text/html" && !out.html) out.html = decoded;
