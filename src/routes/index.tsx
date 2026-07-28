@@ -936,10 +936,13 @@ function App() {
           >
 
             {activeQuery && (
-              <div className="border-b border-border/50 bg-primary/5 px-4 py-1.5 text-[11px] text-muted-foreground">
+              <div className="animate-drop border-b border-border/50 bg-primary/5 px-4 py-1.5 text-[11px] text-muted-foreground">
+                {searchExplain && <span className="mr-2 text-primary">✨ {searchExplain}</span>}
                 Filter: <span className="font-mono text-primary">{activeQuery}</span>
+                {oldestFirst && <span className="ml-2">· oldest first</span>}
               </div>
             )}
+
 
             <div className="flex items-center gap-2 border-b border-border/50 px-3 py-2 text-xs">
               <Checkbox
