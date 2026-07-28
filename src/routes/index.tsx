@@ -10,7 +10,8 @@ import {
   Search, Mail, ShieldAlert, FileText, RefreshCw, Zap, Filter, ArrowLeft,
   Reply, Loader2, Command as CmdIcon, Info, Folder, Plus, MessageSquare, X, Newspaper, ListChecks,
   Radar, BellOff, Clock, ChevronDown, Gauge, Languages, CalendarClock, Paperclip, Download,
-  ShieldCheck, UserSearch, Sparkle,
+  ShieldCheck, UserSearch, Sparkle, Wand2, Crown, BarChart3,
+
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
