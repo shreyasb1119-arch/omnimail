@@ -222,7 +222,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       {/* AI features */}
       <section className="reveal mx-auto max-w-6xl px-6 pb-16">
         <div className="mb-6 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight">Sixteen AI features, not one chat box</h2>
+          <h2 className="text-3xl font-semibold tracking-tight">Twenty AI features, not one chat box</h2>
           <p className="mt-2 text-sm text-muted-foreground">Every one of them works on your live mail.</p>
         </div>
         <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
