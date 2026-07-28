@@ -1,4 +1,22 @@
 import { sessionStore, settingsStore, type AuthSession } from "./store";
+import { getPublicClientId } from "./config.functions";
+
+let cachedClientId: string | null = null;
+
+/** Uses the user's own Client ID when set, otherwise the app's built-in one. */
+export async function resolveClientId(): Promise<string> {
+  const own = settingsStore.get().clientId.trim();
+  if (own) return own;
+  if (cachedClientId) return cachedClientId;
+  try {
+    const r = await getPublicClientId();
+    cachedClientId = r.clientId || "";
+  } catch {
+    cachedClientId = "";
+  }
+  return cachedClientId;
+}
+
 
 declare global {
   interface Window {
