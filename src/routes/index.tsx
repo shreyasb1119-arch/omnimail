@@ -29,7 +29,7 @@ import {
 } from "@/lib/gmail";
 import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
 import { useSession, useSettings, sessionStore, settingsStore, getAiLabels, setAiLabel, type AiLabel, type SortBy } from "@/lib/store";
-import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief, aiSecurityCheck, aiSenderBrief, aiCleanupPlan } from "@/lib/ai";
+import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief, aiSecurityCheck, aiSenderBrief, aiCleanupPlan, aiNaturalSearch, looksNaturalLanguage, aiReplyDraft, aiVipScan, aiInboxReport } from "@/lib/ai";
 import type { AssistantAction } from "@/lib/ai";
 import { startScheduler, scheduleStore, useScheduled, type ScheduledMessage } from "@/lib/schedule";
 import { printMessageAsPdf, printImageAsPdf, printTextAsPdf } from "@/lib/printpdf";
