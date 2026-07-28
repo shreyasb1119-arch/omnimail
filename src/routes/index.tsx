@@ -883,26 +883,6 @@ function App() {
             }`}
           >
 
-            <header className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                id="search-input"
-                placeholder="Search or type a date like 10/26/25…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && runSearch()}
-                className="h-8 border-0 bg-transparent p-0 focus-visible:ring-0"
-              />
-              {activeQuery && (
-                <button onClick={() => { setQuery(""); setActiveQuery(""); }} title="Clear search" className="text-muted-foreground hover:text-foreground">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={load} aria-label="Refresh messages">
-                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              </Button>
-            </header>
-
             {activeQuery && (
               <div className="border-b border-border/50 bg-primary/5 px-4 py-1.5 text-[11px] text-muted-foreground">
                 Filter: <span className="font-mono text-primary">{activeQuery}</span>
