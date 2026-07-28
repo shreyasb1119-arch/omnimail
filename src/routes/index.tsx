@@ -831,45 +831,34 @@ function App() {
                   </Button>
                 </div>
 
-                {/* AI toolbar */}
-                <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-card/40 px-3 py-2">
-                  <span className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    <Sparkles className="h-3.5 w-3.5" /> AI
-                  </span>
-                  <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={runSummarize} disabled={aiBusy === "summary"}>
-                    {aiBusy === "summary" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ListChecks className="h-3.5 w-3.5" />} Summarize
-                  </Button>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-[240px] text-xs">
-                      Condenses this email into 3 bullets plus the single action it asks of you.
-                    </TooltipContent>
-                  </Tooltip>
-                  <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={runSmartReplies} disabled={aiBusy === "replies"}>
-                    {aiBusy === "replies" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquare className="h-3.5 w-3.5" />} Smart replies
-                  </Button>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-[240px] text-xs">
-                      Generates 3 one-line replies. Click one to open Compose pre-filled with it.
-                    </TooltipContent>
-                  </Tooltip>
-                  <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={runTasks} disabled={aiBusy === "tasks"}>
-                    {aiBusy === "tasks" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ListChecks className="h-3.5 w-3.5" />} Action items
-                  </Button>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-[240px] text-xs">
-                      Pulls every task, deadline and commitment out of this email into a dated checklist.
-                    </TooltipContent>
-                  </Tooltip>
+                {/* AI toolbar — collapsed by default */}
+                <div className="mb-5 rounded-xl border border-border/60 bg-card/40 p-2">
+                  <button
+                    onClick={() => setReaderAiOpen((o) => !o)}
+                    className="press flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-primary"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" /> AI tools for this email
+                    <ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform duration-300 ${readerAiOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {readerAiOpen && (
+                    <div className="animate-drop stagger mt-2 grid gap-1.5 sm:grid-cols-2">
+                      {READER_TOOLS.map((t) => (
+                        <div key={t.id} className="flex items-center gap-1">
+                          <Button size="sm" variant="secondary" className="press h-8 flex-1 justify-start gap-1.5 text-xs" onClick={t.run} disabled={t.busy}>
+                            {t.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <t.icon className="h-3.5 w-3.5" />} {t.label}
+                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-[240px] text-xs">{t.info}</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+
 
 
                 {summary && (
