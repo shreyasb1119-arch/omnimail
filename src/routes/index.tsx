@@ -49,7 +49,9 @@ export const Route = createFileRoute("/")({
       { property: "og:description", content: "Ultra-sleek Apple-esque Gmail client with AI writer, smart triage, folders, and a chat assistant that acts on your inbox." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:url", content: "https://omnimail.lovable.app/" },
     ],
+    links: [{ rel: "canonical", href: "https://omnimail.lovable.app/" }],
   }),
   component: App,
 });
