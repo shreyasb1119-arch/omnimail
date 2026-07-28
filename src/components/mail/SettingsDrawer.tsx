@@ -99,27 +99,33 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
           </section>
           <Separator />
 
-          <section className="space-y-3">
+          <section className="space-y-4">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Theme</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {themes.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => settingsStore.set({ theme: t.id })}
-                  className={`group relative rounded-xl border p-3 text-left transition hover:border-primary ${
-                    s.theme === t.id ? "border-primary ring-2 ring-primary/40" : "border-border"
-                  }`}
-                >
-                  <div className="mb-2 flex gap-1">
-                    {t.swatch.map((c) => (
-                      <div key={c} className="h-6 w-6 rounded-md border border-border/40" style={{ background: c }} />
-                    ))}
-                  </div>
-                  <div className="text-sm font-medium">{t.label}</div>
-                </button>
-              ))}
-            </div>
+            {(["dark", "light"] as const).map((mode) => (
+              <div key={mode} className="space-y-2">
+                <div className="text-[11px] font-medium capitalize text-muted-foreground">{mode} themes</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {THEMES.filter((t) => t.mode === mode).map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => settingsStore.set({ theme: t.id as Theme })}
+                      className={`press group relative rounded-xl border p-2.5 text-left hover:border-primary ${
+                        s.theme === t.id ? "border-primary ring-2 ring-primary/40" : "border-border"
+                      }`}
+                    >
+                      <div className="mb-2 flex gap-1">
+                        {t.swatch.map((c) => (
+                          <div key={c} className="h-6 w-6 rounded-md border border-border/40" style={{ background: c }} />
+                        ))}
+                      </div>
+                      <div className="text-xs font-medium">{t.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </section>
+
           <Separator />
           <section className="space-y-4">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Wallpaper</h3>
