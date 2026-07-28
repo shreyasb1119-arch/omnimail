@@ -501,6 +501,36 @@ function App() {
     finally { setAiBusy(null); }
   };
 
+  const runPriority = async () => {
+    if (!messages.length) return;
+    setAiBusy("priority");
+    try {
+      const text = await aiPrioritySort(
+        messages.slice(0, 30).map((m) => ({ from: m.from, subject: m.subject, snippet: m.snippet })),
+      );
+      setScan({ title: "Priority Sort", text });
+    } catch (e: any) { toast.error(e.message || "Priority sort failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const pendingScheduled = scheduled.filter((s) => s.status === "pending").length;
+
+  const AI_TOOLS = [
+    { id: "triage", label: "Smart Triage", icon: Filter, run: runTriage, busy: triaging, badge: 0,
+      info: "Scans your loaded messages in one batched call and tags each High, Low or Cold so you can spot what actually needs attention." },
+    { id: "purge", label: "Auto-Purge", icon: Zap, run: runAutoPurge, busy: purging, badge: 0,
+      info: "Uses AI triage to identify cold outreach and promotional junk in view, then moves them to Trash. Nothing is permanently deleted." },
+    { id: "priority", label: "Priority Sort", icon: Gauge, run: runPriority, busy: aiBusy === "priority", badge: 0,
+      info: "Ranks the messages in view by what you should handle first, with a one-line reason for each." },
+    { id: "digest", label: "Daily Digest", icon: Newspaper, run: runDigest, busy: aiBusy === "digest", badge: 0,
+      info: "Reads the messages currently in view and writes a short brief — what's urgent, what can wait, grouped by theme." },
+    { id: "radar", label: "Follow-up Radar", icon: Radar, run: runRadar, busy: aiBusy === "radar", badge: 0,
+      info: "Surfaces only the threads still waiting on your reply, most urgent first." },
+    { id: "scout", label: "Unsubscribe Scout", icon: BellOff, run: runScout, busy: aiBusy === "scout", badge: 0,
+      info: "Groups newsletters and automated senders, counts how much space they take, and tells you which to drop." },
+    { id: "queue", label: "Scheduled", icon: Clock, run: () => setQueueOpen(true), busy: false, badge: pendingScheduled,
+      info: "Ask the assistant to \"send X an email in 10 minutes\" — Gemini drafts it and it goes out on time. Cancel any time here." },
+  ];
 
 
   const commands: Cmd[] = useMemo(() => [
