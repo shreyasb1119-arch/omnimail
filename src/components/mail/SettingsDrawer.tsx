@@ -50,7 +50,7 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
                 onChange={(e) => setClientId(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Shreyas Mail ships with its own Google client, so you can just sign in. Leave this blank unless
+                Omni Mail ships with its own Google client, so you can just sign in. Leave this blank unless
                 you want to use your own Web OAuth Client from the Google Cloud Console.
               </p>
             </div>

@@ -6,13 +6,20 @@ import {
   Radar, BellOff, Search, Folder, Command, Keyboard, Palette, Image as ImageIcon,
   Trash2, ShieldAlert, CheckCircle2, ArrowRight, Settings, Lock, Gauge,
   Sun, Moon, Languages, CalendarClock, Paperclip, Download, ShieldCheck, UserSearch, Sparkle,
+  Wand2, Crown, BarChart3, Inbox,
+
 } from "lucide-react";
 import { signIn } from "@/lib/gauth";
 import { useSettings, settingsStore, themeMode, DEFAULT_DARK, DEFAULT_LIGHT } from "@/lib/store";
 import { DemoInbox } from "@/components/mail/DemoInbox";
 
 const AI_FEATURES = [
+  { icon: Search, title: "Natural-language finder", body: "“Find my oldest emails from Spotify.” The search bar decides on its own whether you're searching or asking, then builds the Gmail query for you." },
+  { icon: Wand2, title: "Full reply drafting", body: "One tap turns an open email into a complete, ready-to-send reply that answers every question in it." },
+  { icon: Crown, title: "VIP Radar", body: "Separates the humans who matter — clients, colleagues, money — from the automated noise around them." },
+  { icon: BarChart3, title: "Inbox Report", body: "An analytics read on your mail: volume, top senders, recurring themes and where your time actually goes." },
   { icon: MessageSquare, title: "Chat Assistant that acts", body: "Type “star the first 10 messages” or “archive everything from LinkedIn.” It builds a plan, you confirm, it executes on your real inbox." },
+
   { icon: Clock, title: "AI Scheduled Send", body: "“Send Priya a note about Friday in 10 minutes.” Gemini drafts it, we hold it, and it goes out exactly on time — no draft folder babysitting." },
   { icon: Radar, title: "Follow-up Radar", body: "Scans what's loaded and surfaces only the threads still waiting on your reply, ranked by urgency." },
   { icon: ListChecks, title: "Action Extractor", body: "Turns any email into a clean list of tasks, deadlines and commitments with their due dates." },
@@ -49,10 +56,10 @@ const CORE_FEATURES = [
 ];
 
 const VS_OTHERS = [
-  "Other clients let you search a date. Shreyas Mail lets you search a range by typing it.",
-  "Other clients schedule a send. Shreyas Mail writes the email, then schedules the send.",
-  "Other clients have an AI sidebar. Shreyas Mail's assistant actually mutates your inbox after you confirm.",
-  "Other clients pick a theme for you. Shreyas Mail hands you blur, opacity and wallpaper controls per pane.",
+  "Other clients let you search a date. Omni Mail lets you search a range by typing it.",
+  "Other clients schedule a send. Omni Mail writes the email, then schedules the send.",
+  "Other clients have an AI sidebar. Omni Mail's assistant actually mutates your inbox after you confirm.",
+  "Other clients pick a theme for you. Omni Mail hands you blur, opacity and wallpaper controls per pane.",
 ];
 
 export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
@@ -100,7 +107,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
           <div className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
             <Mail className="h-4 w-4" />
           </div>
-          <span className="text-sm font-semibold tracking-tight">Shreyas Mail</span>
+          <span className="text-sm font-semibold tracking-tight">Omni Mail</span>
           <div className="ml-auto flex items-center gap-1">
             <button
               onClick={toggleMode}
@@ -131,13 +138,13 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
           <Sparkles className="h-3 w-3 animate-float text-primary" /> Powered by Gmail + Gemini
         </div>
         <h1 className="text-balance text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
-          Shreyas Mail — email that does the work
+          Omni Mail — email that does the work
           <span className="block bg-gradient-to-r from-primary to-primary/50 bg-clip-text text-transparent">
             before you open it
           </span>
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-balance text-base leading-relaxed text-muted-foreground">
-          Shreyas Mail sits on top of your real Gmail and adds the things every other client
+          Omni Mail sits on top of your real Gmail and adds the things every other client
           refuses to: an assistant that acts on your inbox, AI that drafts and schedules sends
           on a timer, range-based date search, and glass you can tune pixel by pixel.
         </p>
@@ -161,7 +168,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
         <div className="mb-6 text-center">
           <h2 className="text-3xl font-semibold tracking-tight">Try it right here</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            A real, clickable Shreyas Mail. Open a message, star it, run any AI tool —
+            A real, clickable Omni Mail. Open a message, star it, run any AI tool —
             it all works on this page before you ever sign in.
           </p>
         </div>
@@ -185,7 +192,38 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
         </div>
       </section>
 
+      {/* Bring your other inboxes */}
+      <section className="reveal mx-auto max-w-5xl px-6 pb-16">
+        <div className="glass grid gap-6 rounded-3xl p-8 shadow-xl md:grid-cols-2 md:items-center">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">Outlook, Proton, iCloud — all in one place</h2>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              Omni Mail reads whatever your Google account can reach, so any address you attach to Gmail shows up
+              here with every AI tool applied to it. Add Outlook, Yahoo or any IMAP account under Gmail's
+              “Accounts and Import”, or point Proton Bridge and iCloud at the same place, and they arrive
+              in this inbox — one search bar, one assistant, one set of themes across all of them.
+            </p>
+            <a
+              href="https://mail.google.com/mail/u/0/#settings/accounts"
+              target="_blank"
+              rel="noreferrer"
+              className="press mt-4 inline-flex items-center gap-2 rounded-xl border border-border/60 bg-card/50 px-4 py-2 text-xs font-medium hover:border-primary/60"
+            >
+              <Inbox className="h-3.5 w-3.5 text-primary" /> Connect another mailbox <ArrowRight className="h-3.5 w-3.5" />
+            </a>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {["Outlook", "Proton", "iCloud", "Yahoo", "Any IMAP", "Google Workspace"].map((n) => (
+              <div key={n} className="lift rounded-2xl border border-border/50 bg-card/40 p-4 text-center text-xs font-medium">
+                {n}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Date range highlight */}
+
       <section className="reveal mx-auto max-w-5xl px-6 pb-16">
         <div className="glass grid gap-6 rounded-3xl p-8 shadow-xl md:grid-cols-2 md:items-center">
           <div>
@@ -215,7 +253,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       {/* AI features */}
       <section className="reveal mx-auto max-w-6xl px-6 pb-16">
         <div className="mb-6 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight">Sixteen AI features, not one chat box</h2>
+          <h2 className="text-3xl font-semibold tracking-tight">Twenty AI features, not one chat box</h2>
           <p className="mt-2 text-sm text-muted-foreground">Every one of them works on your live mail.</p>
         </div>
         <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -267,7 +305,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       </section>
 
       <footer className="border-t border-border/40 py-8 text-center text-xs text-muted-foreground">
-        Shreyas Mail · Built on the Gmail API · Your mail never leaves your browser
+        Omni Mail · Built on the Gmail API · Your mail never leaves your browser
       </footer>
     </div>
   );

@@ -10,7 +10,8 @@ import {
   Search, Mail, ShieldAlert, FileText, RefreshCw, Zap, Filter, ArrowLeft,
   Reply, Loader2, Command as CmdIcon, Info, Folder, Plus, MessageSquare, X, Newspaper, ListChecks,
   Radar, BellOff, Clock, ChevronDown, Gauge, Languages, CalendarClock, Paperclip, Download,
-  ShieldCheck, UserSearch, Sparkle,
+  ShieldCheck, UserSearch, Sparkle, Wand2, Crown, BarChart3,
+
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -29,7 +30,7 @@ import {
 } from "@/lib/gmail";
 import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
 import { useSession, useSettings, sessionStore, settingsStore, getAiLabels, setAiLabel, type AiLabel, type SortBy } from "@/lib/store";
-import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief, aiSecurityCheck, aiSenderBrief, aiCleanupPlan } from "@/lib/ai";
+import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief, aiSecurityCheck, aiSenderBrief, aiCleanupPlan, aiNaturalSearch, looksNaturalLanguage, aiReplyDraft, aiVipScan, aiInboxReport } from "@/lib/ai";
 import type { AssistantAction } from "@/lib/ai";
 import { startScheduler, scheduleStore, useScheduled, type ScheduledMessage } from "@/lib/schedule";
 import { printMessageAsPdf, printImageAsPdf, printTextAsPdf } from "@/lib/printpdf";
@@ -43,9 +44,9 @@ import { Landing } from "@/components/mail/Landing";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Shreyas Mail — AI-native email" },
+      { title: "Omni Mail — AI-native email" },
       { name: "description", content: "Ultra-sleek Apple-esque Gmail client with AI writer, smart triage, folders, and a chat assistant that acts on your inbox." },
-      { property: "og:title", content: "Shreyas Mail — AI-native email" },
+      { property: "og:title", content: "Omni Mail — AI-native email" },
       { property: "og:description", content: "Ultra-sleek Apple-esque Gmail client with AI writer, smart triage, folders, and a chat assistant that acts on your inbox." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -150,7 +151,10 @@ function App() {
   const [purging, setPurging] = useState(false);
   const [confirmEmpty, setConfirmEmpty] = useState(false);
   const [cursorIndex, setCursorIndex] = useState(0);
-  const [aiBusy, setAiBusy] = useState<null | "summary" | "replies" | "digest" | "tasks" | "radar" | "scout" | "priority" | "translate" | "tone" | "meeting" | "files" | "security" | "sender" | "cleanup">(null);
+  const [aiBusy, setAiBusy] = useState<null | "summary" | "replies" | "digest" | "tasks" | "radar" | "scout" | "priority" | "translate" | "tone" | "meeting" | "files" | "security" | "sender" | "cleanup" | "reply" | "vip" | "report">(null);
+  const [searching, setSearching] = useState(false);
+  const [searchExplain, setSearchExplain] = useState("");
+  const [oldestFirst, setOldestFirst] = useState(false);
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
   const [readerAiOpen, setReaderAiOpen] = useState(false);
   const [summary, setSummary] = useState<string>("");
@@ -241,9 +245,31 @@ function App() {
 
   useEffect(() => { if (session) load(); }, [session, folder, activeQuery, load]);
 
-  const runSearch = () => {
-    setActiveQuery(transformQuery(query));
+  /** Smart search: auto-detects whether you're searching or talking to the AI. */
+  const runSearch = async (forceAi = false) => {
+    const q = query.trim();
+    if (!q) { setActiveQuery(""); setSearchExplain(""); return; }
+    if (!forceAi && !looksNaturalLanguage(q)) {
+      setSearchExplain("");
+      setActiveQuery(transformQuery(q));
+      return;
+    }
+    setSearching(true);
+    try {
+      const r = await aiNaturalSearch(q, userLabels.map((l) => l.name));
+      setSearchExplain(r.explain || "AI search");
+      if (r.sort === "oldest") settingsStore.set({ sortBy: "date" });
+      else if (r.sort === "sender") settingsStore.set({ sortBy: "sender" });
+      setOldestFirst(r.sort === "oldest");
+      setActiveQuery(r.query || transformQuery(q));
+    } catch (e: any) {
+      toast.error(e.message || "AI search failed");
+      setActiveQuery(transformQuery(q));
+    } finally {
+      setSearching(false);
+    }
   };
+
 
   const openMessage = useCallback(
     async (id: string) => {
@@ -423,8 +449,10 @@ function App() {
     const list = [...messages];
     if (settings.sortBy === "sender") list.sort((a, b) => senderName(a).localeCompare(senderName(b)));
     else if (settings.sortBy === "unread") list.sort((a, b) => Number(b.unread) - Number(a.unread));
+    else if (oldestFirst) list.sort((a, b) => a.date - b.date);
     return list;
-  }, [messages, settings.sortBy]);
+  }, [messages, settings.sortBy, oldestFirst]);
+
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -603,7 +631,39 @@ function App() {
     finally { setAiBusy(null); }
   };
 
+  const runVip = async () => {
+    if (!messages.length) return;
+    setAiBusy("vip");
+    try {
+      const text = await aiVipScan(messages.slice(0, 40).map((m) => ({ from: m.from, subject: m.subject, snippet: m.snippet })));
+      setScan({ title: "VIP radar", text });
+    } catch (e: any) { toast.error(e.message || "VIP radar failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runReport = async () => {
+    if (!messages.length) return;
+    setAiBusy("report");
+    try {
+      const text = await aiInboxReport(messages.slice(0, 40).map((m) => ({ from: m.from, subject: m.subject, snippet: m.snippet })));
+      setScan({ title: "Inbox report", text });
+    } catch (e: any) { toast.error(e.message || "Inbox report failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runReplyDraft = async () => {
+    if (!opened) return;
+    setAiBusy("reply");
+    try {
+      const body = await aiReplyDraft(opened.subject, opened.from, opened.bodyText || opened.snippet);
+      setComposeInitial({ to: opened.fromEmail, subject: `Re: ${opened.subject}`, body });
+      setComposeOpen(true);
+    } catch (e: any) { toast.error(e.message || "Reply draft failed"); }
+    finally { setAiBusy(null); }
+  };
+
   const pendingScheduled = scheduled.filter((s) => s.status === "pending").length;
+
 
   const AI_TOOLS = [
     { id: "triage", label: "Smart Triage", icon: Filter, run: runTriage, busy: triaging, badge: 0,
@@ -618,6 +678,10 @@ function App() {
       info: "Surfaces only the threads still waiting on your reply, most urgent first." },
     { id: "scout", label: "Unsubscribe Scout", icon: BellOff, run: runScout, busy: aiBusy === "scout", badge: 0,
       info: "Groups newsletters and automated senders, counts how much space they take, and tells you which to drop." },
+    { id: "vip", label: "VIP Radar", icon: Crown, run: runVip, busy: aiBusy === "vip", badge: 0,
+      info: "Separates the real humans who matter — clients, colleagues, money — from the automated noise in view." },
+    { id: "report", label: "Inbox Report", icon: BarChart3, run: runReport, busy: aiBusy === "report", badge: 0,
+      info: "An analytics-style read on your loaded mail: volume, top senders, recurring themes and time sinks." },
     { id: "cleanup", label: "Cleanup Plan", icon: Sparkle, run: runCleanupPlan, busy: aiBusy === "cleanup", badge: 0,
       info: "Turns the messages in view into a concrete plan: what to archive now, what to reply to today, and what to unsubscribe from." },
     { id: "queue", label: "Scheduled", icon: Clock, run: () => setQueueOpen(true), busy: false, badge: pendingScheduled,
@@ -625,6 +689,8 @@ function App() {
   ];
 
   const READER_TOOLS = [
+    { id: "replydraft", label: "Draft full reply", icon: Wand2, run: runReplyDraft, busy: aiBusy === "reply",
+      info: "Writes a complete, ready-to-send reply that answers every question in the email, then opens it in Compose." },
     { id: "summary", label: "Summarize", icon: ListChecks, run: runSummarize, busy: aiBusy === "summary",
       info: "Condenses this email into 3 bullets plus the single action it asks of you." },
     { id: "replies", label: "Smart replies", icon: MessageSquare, run: runSmartReplies, busy: aiBusy === "replies",
@@ -679,8 +745,60 @@ function App() {
     <TooltipProvider delayDuration={200}>
       <ThemeApplier />
       <Toaster position="top-right" richColors />
-      <div className="relative h-screen w-screen overflow-hidden p-3 text-foreground">
-        <div className="flex h-full w-full gap-3 overflow-hidden">
+      <div className="relative flex h-screen w-screen flex-col gap-3 overflow-hidden p-3 text-foreground">
+        {/* Floating omni search — plain search or natural language, auto-detected */}
+        <div className="animate-drop flex w-full justify-center">
+          <div className="glass-cmd flex w-full max-w-2xl items-center gap-2 rounded-full px-4 py-2 shadow-xl ring-1 ring-border/40 transition focus-within:ring-2 focus-within:ring-primary/40">
+            {searching ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
+            ) : looksNaturalLanguage(query) ? (
+              <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+            ) : (
+              <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+            )}
+            <Input
+              id="search-input"
+              placeholder="Search, type 10/26/25, or ask — “find my oldest emails from Spotify”"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") void runSearch(); }}
+              className="h-8 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
+              aria-label="Search mail or ask the AI"
+            />
+            {query && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => void runSearch(true)}
+                    aria-label="Ask AI to find these emails"
+                    className="press rounded-full p-1 text-primary hover:bg-primary/10"
+                  >
+                    <Wand2 className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[220px] text-xs">
+                  Force AI search — describe what you want and it builds the Gmail query for you.
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {(activeQuery || query) && (
+              <button
+                onClick={() => { setQuery(""); setActiveQuery(""); setSearchExplain(""); setOldestFirst(false); }}
+                aria-label="Clear search"
+                className="press rounded-full p-1 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <div className="mx-1 h-5 w-px bg-border/60" />
+            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full" onClick={load} aria-label="Refresh messages">
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex min-h-0 w-full flex-1 gap-3 overflow-hidden">
+
           {/* Sidebar */}
           <aside className="glass no-scrollbar flex w-64 shrink-0 flex-col overflow-y-auto rounded-2xl px-3 py-4 shadow-xl">
             <div className="mb-5 flex items-center gap-2.5 px-1">
@@ -693,7 +811,7 @@ function App() {
               </div>
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold tracking-tight">
-                  {session.profile.name || "Shreyas Mail"}
+                  {session.profile.name || "Omni Mail"}
                 </div>
                 <div className="truncate text-[10px] text-muted-foreground">{session.profile.email}</div>
               </div>
@@ -817,31 +935,14 @@ function App() {
             }`}
           >
 
-            <header className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                id="search-input"
-                placeholder="Search or type a date like 10/26/25…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && runSearch()}
-                className="h-8 border-0 bg-transparent p-0 focus-visible:ring-0"
-              />
-              {activeQuery && (
-                <button onClick={() => { setQuery(""); setActiveQuery(""); }} title="Clear search" className="text-muted-foreground hover:text-foreground">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={load} aria-label="Refresh messages">
-                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              </Button>
-            </header>
-
             {activeQuery && (
-              <div className="border-b border-border/50 bg-primary/5 px-4 py-1.5 text-[11px] text-muted-foreground">
+              <div className="animate-drop border-b border-border/50 bg-primary/5 px-4 py-1.5 text-[11px] text-muted-foreground">
+                {searchExplain && <span className="mr-2 text-primary">✨ {searchExplain}</span>}
                 Filter: <span className="font-mono text-primary">{activeQuery}</span>
+                {oldestFirst && <span className="ml-2">· oldest first</span>}
               </div>
             )}
+
 
             <div className="flex items-center gap-2 border-b border-border/50 px-3 py-2 text-xs">
               <Checkbox
