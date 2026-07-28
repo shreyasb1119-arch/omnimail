@@ -24,7 +24,7 @@ import {
 import {
   batchDelete, batchModify, deleteMessage, emptyTrash,
   listMessages, batchGetMessages, modifyMessage, trashMessage,
-  listLabels, createLabel, type GmailLabel, type ParsedMessage,
+  listLabels, createLabel, downloadAttachment, attachmentObjectUrl, type GmailLabel, type ParsedMessage,
 } from "@/lib/gmail";
 import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
 import { useSession, useSettings, sessionStore, getAiLabels, setAiLabel, type AiLabel } from "@/lib/store";
@@ -959,6 +959,52 @@ function App() {
                   </div>
                   {labelBadge(aiLabels[opened.id])}
                 </div>
+                {opened.attachments.length > 0 && (
+                  <div className="mt-5">
+                    <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Paperclip className="h-3.5 w-3.5" /> {opened.attachments.length} attachment{opened.attachments.length === 1 ? "" : "s"}
+                    </div>
+                    <div className="stagger grid gap-2 sm:grid-cols-2">
+                      {opened.attachments.map((a) => (
+                        <div key={a.attachmentId} className="lift flex items-center gap-2 rounded-xl border border-border/60 bg-card/50 p-2.5">
+                          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
+                            <FileText className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-xs font-medium">{a.filename}</div>
+                            <div className="text-[10px] text-muted-foreground">{(a.size / 1024).toFixed(0)} KB</div>
+                          </div>
+                          <button
+                            title="Download"
+                            className="press rounded p-1.5 text-muted-foreground hover:text-primary"
+                            onClick={async () => {
+                              try { await downloadAttachment(opened.id, a); } catch (e: any) { toast.error(e.message || "Download failed"); }
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                          </button>
+                          <button
+                            title="Save as PDF"
+                            className="press rounded p-1.5 text-muted-foreground hover:text-primary"
+                            onClick={async () => {
+                              try {
+                                if (a.mimeType.startsWith("image/")) {
+                                  const url = await attachmentObjectUrl(opened.id, a);
+                                  printImageAsPdf(url, a.filename);
+                                } else {
+                                  printTextAsPdf(a.filename, `Attachment: ${a.filename}\nType: ${a.mimeType}\nSize: ${(a.size / 1024).toFixed(0)} KB\n\nFrom the email "${opened.subject}" by ${opened.from}.`);
+                                }
+                              } catch (e: any) { toast.error(e.message || "PDF export failed"); }
+                            }}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="mt-6 rounded-2xl border border-border/60 bg-card/40 p-6">
                   {opened.bodyHtml ? (
                     <div className="prose-mail text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: opened.bodyHtml }} />
