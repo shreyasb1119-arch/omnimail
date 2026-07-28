@@ -10,6 +10,7 @@ import {
   Search, Mail, ShieldAlert, FileText, RefreshCw, Zap, Filter, ArrowLeft,
   Reply, Loader2, Command as CmdIcon, Info, Folder, Plus, MessageSquare, X, Newspaper, ListChecks,
   Radar, BellOff, Clock, ChevronDown, Gauge, Languages, CalendarClock, Paperclip, Download,
+  ShieldCheck, UserSearch, Sparkle,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -27,8 +28,8 @@ import {
   listLabels, createLabel, downloadAttachment, attachmentObjectUrl, type GmailLabel, type ParsedMessage,
 } from "@/lib/gmail";
 import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
-import { useSession, useSettings, sessionStore, getAiLabels, setAiLabel, type AiLabel } from "@/lib/store";
-import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief } from "@/lib/ai";
+import { useSession, useSettings, sessionStore, settingsStore, getAiLabels, setAiLabel, type AiLabel, type SortBy } from "@/lib/store";
+import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief, aiSecurityCheck, aiSenderBrief, aiCleanupPlan } from "@/lib/ai";
 import type { AssistantAction } from "@/lib/ai";
 import { startScheduler, scheduleStore, useScheduled, type ScheduledMessage } from "@/lib/schedule";
 import { printMessageAsPdf, printImageAsPdf, printTextAsPdf } from "@/lib/printpdf";
@@ -130,6 +131,7 @@ function App() {
   const [query, setQuery] = useState("");
   const [activeQuery, setActiveQuery] = useState("");
   const [messages, setMessages] = useState<ParsedMessage[]>([]);
+  const [foldersOpen, setFoldersOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openId, setOpenId] = useState<string | null>(null);
@@ -146,7 +148,7 @@ function App() {
   const [purging, setPurging] = useState(false);
   const [confirmEmpty, setConfirmEmpty] = useState(false);
   const [cursorIndex, setCursorIndex] = useState(0);
-  const [aiBusy, setAiBusy] = useState<null | "summary" | "replies" | "digest" | "tasks" | "radar" | "scout" | "priority" | "translate" | "tone" | "meeting" | "files">(null);
+  const [aiBusy, setAiBusy] = useState<null | "summary" | "replies" | "digest" | "tasks" | "radar" | "scout" | "priority" | "translate" | "tone" | "meeting" | "files" | "security" | "sender" | "cleanup">(null);
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
   const [readerAiOpen, setReaderAiOpen] = useState(false);
   const [summary, setSummary] = useState<string>("");
@@ -412,6 +414,16 @@ function App() {
     };
   };
 
+  const senderName = (m: ParsedMessage) =>
+    (m.from.split("<")[0].replace(/"/g, "").trim() || m.fromEmail).toLowerCase();
+
+  const viewMessages = useMemo(() => {
+    const list = [...messages];
+    if (settings.sortBy === "sender") list.sort((a, b) => senderName(a).localeCompare(senderName(b)));
+    else if (settings.sortBy === "unread") list.sort((a, b) => Number(b.unread) - Number(a.unread));
+    return list;
+  }, [messages, settings.sortBy]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -419,8 +431,8 @@ function App() {
       const inField = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setCmdOpen(true); return; }
       if (inField) return;
-      const cur = messages[cursorIndex];
-      if (e.key === "j") { e.preventDefault(); setCursorIndex((i) => Math.min(messages.length - 1, i + 1)); }
+      const cur = viewMessages[cursorIndex];
+      if (e.key === "j") { e.preventDefault(); setCursorIndex((i) => Math.min(viewMessages.length - 1, i + 1)); }
       else if (e.key === "k") { e.preventDefault(); setCursorIndex((i) => Math.max(0, i - 1)); }
       else if (e.key === "c") { e.preventDefault(); setComposeInitial(undefined); setComposeOpen(true); }
       else if (e.key === "/") { e.preventDefault(); document.getElementById("search-input")?.focus(); }
@@ -431,7 +443,7 @@ function App() {
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [messages, cursorIndex, openMessage]);
+  }, [viewMessages, cursorIndex, openMessage]);
 
   const opened = messages.find((m) => m.id === openId) || null;
   const avatarSrc = settings.avatarUrl || session?.profile.picture || "";
@@ -556,6 +568,39 @@ function App() {
     finally { setAiBusy(null); }
   };
 
+  const runSecurityCheck = async () => {
+    if (!opened) return;
+    setAiBusy("security");
+    try {
+      const text = await aiSecurityCheck(opened.subject, opened.from, opened.bodyText || opened.snippet);
+      setScan({ title: "Security check", text });
+    } catch (e: any) { toast.error(e.message || "Security check failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runSenderBrief = async () => {
+    if (!opened) return;
+    setAiBusy("sender");
+    try {
+      const fromSame = messages.filter((m) => m.fromEmail === opened.fromEmail);
+      const text = await aiSenderBrief(opened.from, fromSame.map((m) => ({ subject: m.subject, snippet: m.snippet })));
+      setScan({ title: `About ${opened.fromEmail}`, text });
+    } catch (e: any) { toast.error(e.message || "Sender brief failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runCleanupPlan = async () => {
+    if (!messages.length) return;
+    setAiBusy("cleanup");
+    try {
+      const text = await aiCleanupPlan(
+        messages.slice(0, 40).map((m) => ({ from: m.from, subject: m.subject, snippet: m.snippet })),
+      );
+      setScan({ title: "Inbox cleanup plan", text });
+    } catch (e: any) { toast.error(e.message || "Cleanup plan failed"); }
+    finally { setAiBusy(null); }
+  };
+
   const pendingScheduled = scheduled.filter((s) => s.status === "pending").length;
 
   const AI_TOOLS = [
@@ -571,6 +616,8 @@ function App() {
       info: "Surfaces only the threads still waiting on your reply, most urgent first." },
     { id: "scout", label: "Unsubscribe Scout", icon: BellOff, run: runScout, busy: aiBusy === "scout", badge: 0,
       info: "Groups newsletters and automated senders, counts how much space they take, and tells you which to drop." },
+    { id: "cleanup", label: "Cleanup Plan", icon: Sparkle, run: runCleanupPlan, busy: aiBusy === "cleanup", badge: 0,
+      info: "Turns the messages in view into a concrete plan: what to archive now, what to reply to today, and what to unsubscribe from." },
     { id: "queue", label: "Scheduled", icon: Clock, run: () => setQueueOpen(true), busy: false, badge: pendingScheduled,
       info: "Ask the assistant to \"send X an email in 10 minutes\" — Gemini drafts it and it goes out on time. Cancel any time here." },
   ];
@@ -590,6 +637,10 @@ function App() {
       info: "Rewrites the subject and body in your language without leaving the thread." },
     { id: "files", label: "Attachment brief", icon: Paperclip, run: runAttachmentBrief, busy: aiBusy === "files",
       info: "Explains what the attached files are, which one actually matters, and the single action to take." },
+    { id: "security", label: "Security check", icon: ShieldCheck, run: runSecurityCheck, busy: aiBusy === "security",
+      info: "Checks this email for phishing, spoofing and invoice-fraud signals, then tells you exactly what to do." },
+    { id: "sender", label: "Sender brief", icon: UserSearch, run: runSenderBrief, busy: aiBusy === "sender",
+      info: "Profiles this sender from every loaded email they sent you: what they usually want and which threads are still open." },
     { id: "pdf", label: "Save as PDF", icon: FileText, run: () => opened && printMessageAsPdf({ subject: opened.subject, from: opened.from, to: opened.to, date: opened.date, bodyHtml: opened.bodyHtml, bodyText: opened.bodyText }), busy: false,
       info: "Exports this email — headers and body — as a clean PDF via your browser's print dialog." },
   ];
@@ -629,7 +680,7 @@ function App() {
       <div className="relative h-screen w-screen overflow-hidden p-3 text-foreground">
         <div className="flex h-full w-full gap-3 overflow-hidden">
           {/* Sidebar */}
-          <aside className="glass flex w-64 shrink-0 flex-col overflow-hidden rounded-2xl px-3 py-4 shadow-xl">
+          <aside className="glass no-scrollbar flex w-64 shrink-0 flex-col overflow-y-auto rounded-2xl px-3 py-4 shadow-xl">
             <div className="mb-5 flex items-center gap-2.5 px-1">
               <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground shadow-md">
                 {avatarSrc ? (
@@ -669,7 +720,14 @@ function App() {
             {/* Folders (user labels) */}
             <div className="mt-4">
               <div className="mb-1 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                <span>Folders</span>
+                <button
+                  onClick={() => setFoldersOpen((o) => !o)}
+                  className="press flex items-center gap-1 uppercase tracking-wider hover:text-foreground"
+                >
+                  Folders
+                  <ChevronDown className={`h-3 w-3 transition-transform duration-300 ${foldersOpen ? "rotate-180" : ""}`} />
+                  <span className="ml-1 normal-case tracking-normal text-muted-foreground/60">{userLabels.length}</span>
+                </button>
                 <button
                   onClick={() => setNewFolderOpen(true)}
                   className="rounded p-0.5 hover:text-foreground"
@@ -678,7 +736,8 @@ function App() {
                   <Plus className="h-3 w-3" />
                 </button>
               </div>
-              <div className="max-h-40 space-y-0.5 overflow-y-auto">
+              {foldersOpen && (
+              <div className="no-scrollbar animate-drop max-h-40 space-y-0.5 overflow-y-auto">
                 {userLabels.length === 0 && (
                   <div className="px-3 py-1 text-[11px] text-muted-foreground/70">No folders yet</div>
                 )}
@@ -694,6 +753,7 @@ function App() {
                   </button>
                 ))}
               </div>
+              )}
             </div>
 
             <div className="mt-4 rounded-xl border border-border/60 bg-card/40 p-2">
@@ -787,6 +847,16 @@ function App() {
                 onCheckedChange={(v) => setSelected(v ? new Set(messages.map((m) => m.id)) : new Set())}
               />
               <span className="text-muted-foreground">{selected.size ? `${selected.size} selected` : `${messages.length} messages`}</span>
+              <select
+                aria-label="Sort messages"
+                value={settings.sortBy}
+                onChange={(e) => settingsStore.set({ sortBy: e.target.value as SortBy })}
+                className="ml-2 rounded-md border border-border/60 bg-card/50 px-2 py-1 text-[11px] text-muted-foreground outline-none hover:text-foreground"
+              >
+                <option value="date">Newest first</option>
+                <option value="sender">Sender A–Z</option>
+                <option value="unread">Unread first</option>
+              </select>
               <div className="ml-auto flex items-center gap-1">
                 {selected.size > 0 && (
                   <>
@@ -806,7 +876,7 @@ function App() {
               </div>
             </div>
 
-            <div ref={listRef} className="flex-1 overflow-y-auto">
+            <div ref={listRef} className="no-scrollbar flex-1 overflow-y-auto">
               {loading && !messages.length && (
                 <div className="p-8 text-center text-sm text-muted-foreground">
                   <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" /> Loading…
@@ -815,7 +885,7 @@ function App() {
               {!loading && !messages.length && (
                 <div className="p-10 text-center text-sm text-muted-foreground">Inbox zero. 🎉</div>
               )}
-              {messages.map((m, i) => {
+              {viewMessages.map((m, i) => {
                 const isOpen = openId === m.id;
                 const isCursor = i === cursorIndex;
                 const isSel = selected.has(m.id);
@@ -864,7 +934,7 @@ function App() {
 
           {/* Reader — only exists when a message is opened */}
           {opened && (
-            <section className="glass-inbox animate-in-up relative flex-1 overflow-y-auto rounded-2xl shadow-xl">
+            <section className="glass-inbox no-scrollbar animate-in-up relative flex-1 overflow-y-auto rounded-2xl shadow-xl">
               <div className="mx-auto max-w-3xl px-8 py-8">
                 <div className="mb-4 flex flex-wrap items-center gap-2">
                   <Button size="sm" variant="ghost" onClick={() => setOpenId(null)}><ArrowLeft className="h-4 w-4" /></Button>

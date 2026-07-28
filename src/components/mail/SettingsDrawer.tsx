@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
-import { settingsStore, useSettings, THEMES, type Theme } from "@/lib/store";
+import { settingsStore, useSettings, THEMES, WALLPAPERS, type Theme } from "@/lib/store";
 import { toast } from "sonner";
 import { signOut } from "@/lib/gauth";
 
@@ -43,15 +43,15 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
           <section className="space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Google Account</h3>
             <div className="space-y-2">
-              <Label>OAuth Client ID</Label>
+              <Label>OAuth Client ID (optional)</Label>
               <Input
                 placeholder="xxxxxxx.apps.googleusercontent.com"
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Create a Web OAuth Client in Google Cloud Console. Add this origin as an Authorized JavaScript
-                origin. Enable the Gmail API.
+                Shreyas Mail ships with its own Google client, so you can just sign in. Leave this blank unless
+                you want to use your own Web OAuth Client from the Google Cloud Console.
               </p>
             </div>
             <div className="space-y-2">
@@ -129,6 +129,23 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
           <Separator />
           <section className="space-y-4">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Wallpaper</h3>
+            <div className="space-y-2">
+              <Label>Built-in wallpapers</Label>
+              <div className="grid grid-cols-5 gap-2">
+                {WALLPAPERS.map((w) => (
+                  <button
+                    key={w.id}
+                    title={w.label}
+                    onClick={() => settingsStore.set({ wallpaperUrl: w.url })}
+                    className={`press h-12 overflow-hidden rounded-lg border ${
+                      s.wallpaperUrl === w.url ? "border-primary ring-2 ring-primary/40" : "border-border/60"
+                    }`}
+                  >
+                    <img src={w.url} alt={w.label} loading="lazy" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="space-y-2">
               <Label>Image URL</Label>
               <Input

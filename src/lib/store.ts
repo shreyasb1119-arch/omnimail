@@ -4,8 +4,9 @@ export type Theme =
   // dark
   | "superhuman" | "oled" | "cyberpunk" | "forest" | "ocean"
   | "midnight" | "ember" | "aurora" | "grape" | "carbon" | "dusk"
+  | "slate" | "royal"
   // light
-  | "nordic" | "paper" | "linen" | "mint" | "blossom";
+  | "nordic" | "paper" | "linen" | "mint" | "blossom" | "sand" | "sky";
 
 export const THEMES: { id: Theme; label: string; mode: "dark" | "light"; swatch: string[] }[] = [
   { id: "superhuman", label: "Superhuman", mode: "dark", swatch: ["#1a1c26", "#e05a4a"] },
@@ -19,12 +20,31 @@ export const THEMES: { id: Theme; label: string; mode: "dark" | "light"; swatch:
   { id: "grape", label: "Grape Soda", mode: "dark", swatch: ["#1d1330", "#b57cff"] },
   { id: "carbon", label: "Carbon Mono", mode: "dark", swatch: ["#131313", "#dcdcdc"] },
   { id: "dusk", label: "Desert Dusk", mode: "dark", swatch: ["#241a1d", "#ff9d7a"] },
+  { id: "slate", label: "Slate Steel", mode: "dark", swatch: ["#242832", "#6fb4e8"] },
+  { id: "royal", label: "Royal Violet", mode: "dark", swatch: ["#1c1230", "#a97bf5"] },
   { id: "nordic", label: "Nordic", mode: "light", swatch: ["#f7f9fc", "#4c78c9"] },
   { id: "paper", label: "Paper & Ink", mode: "light", swatch: ["#f5f3ee", "#1c1c1c"] },
   { id: "linen", label: "Warm Linen", mode: "light", swatch: ["#faf7f1", "#b0764a"] },
   { id: "mint", label: "Fresh Mint", mode: "light", swatch: ["#f2fbf7", "#12a37a"] },
   { id: "blossom", label: "Blossom", mode: "light", swatch: ["#fdf5f8", "#d4638d"] },
+  { id: "sand", label: "Soft Sand", mode: "light", swatch: ["#faf5ea", "#c07b3c"] },
+  { id: "sky", label: "Clear Sky", mode: "light", swatch: ["#f4f8fd", "#3b82c4"] },
 ];
+
+/** Ten built-in wallpapers. Users can still paste a URL or upload their own. */
+export const WALLPAPERS: { id: string; label: string; url: string }[] = [
+  { id: "aurora", label: "Aurora", url: "https://images.unsplash.com/photo-1483347756197-71ef80e95f73?auto=format&fit=crop&w=1920&q=70" },
+  { id: "peaks", label: "Peaks", url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1920&q=70" },
+  { id: "dunes", label: "Dunes", url: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?auto=format&fit=crop&w=1920&q=70" },
+  { id: "forest", label: "Forest", url: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1920&q=70" },
+  { id: "waves", label: "Waves", url: "https://images.unsplash.com/photo-1505118380757-91f5f5632de0?auto=format&fit=crop&w=1920&q=70" },
+  { id: "city", label: "City Night", url: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=1920&q=70" },
+  { id: "gradient", label: "Gradient", url: "https://images.unsplash.com/photo-1557682250-33bd709cbe85?auto=format&fit=crop&w=1920&q=70" },
+  { id: "marble", label: "Marble", url: "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=1920&q=70" },
+  { id: "fog", label: "Fog", url: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1920&q=70" },
+  { id: "space", label: "Deep Space", url: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1920&q=70" },
+];
+
 
 export const DEFAULT_DARK: Theme = "superhuman";
 export const DEFAULT_LIGHT: Theme = "nordic";
@@ -47,7 +67,10 @@ export interface Settings {
   inboxBlur: number;
   cmdOpacity: number;
   cmdBlur: number;
+  sortBy: SortBy;
 }
+
+export type SortBy = "date" | "sender" | "unread";
 
 export interface AuthSession {
   accessToken: string;
@@ -74,6 +97,7 @@ const defaultSettings: Settings = {
   inboxBlur: 20,
   cmdOpacity: 70,
   cmdBlur: 28,
+  sortBy: "date",
 };
 
 

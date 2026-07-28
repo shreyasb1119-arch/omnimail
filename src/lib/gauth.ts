@@ -1,4 +1,22 @@
 import { sessionStore, settingsStore, type AuthSession } from "./store";
+import { getPublicClientId } from "./config.functions";
+
+let cachedClientId: string | null = null;
+
+/** Uses the user's own Client ID when set, otherwise the app's built-in one. */
+export async function resolveClientId(): Promise<string> {
+  const own = settingsStore.get().clientId.trim();
+  if (own) return own;
+  if (cachedClientId) return cachedClientId;
+  try {
+    const r = await getPublicClientId();
+    cachedClientId = r.clientId || "";
+  } catch {
+    cachedClientId = "";
+  }
+  return cachedClientId;
+}
+
 
 declare global {
   interface Window {
@@ -44,9 +62,10 @@ async function fetchProfile(accessToken: string) {
 }
 
 export async function signIn(interactive = true): Promise<AuthSession> {
-  const { clientId } = settingsStore.get();
-  if (!clientId) throw new Error("Add your Google OAuth Client ID in Settings first.");
+  const clientId = await resolveClientId();
+  if (!clientId) throw new Error("No Google OAuth Client ID is configured. Add one in Settings.");
   await loadGis();
+
 
   return new Promise<AuthSession>((resolve, reject) => {
     const tokenClient = window.google.accounts.oauth2.initTokenClient({
