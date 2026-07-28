@@ -192,7 +192,38 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
         </div>
       </section>
 
+      {/* Bring your other inboxes */}
+      <section className="reveal mx-auto max-w-5xl px-6 pb-16">
+        <div className="glass grid gap-6 rounded-3xl p-8 shadow-xl md:grid-cols-2 md:items-center">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">Outlook, Proton, iCloud — all in one place</h2>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              Omni Mail reads whatever your Google account can reach, so any address you attach to Gmail shows up
+              here with every AI tool applied to it. Add Outlook, Yahoo or any IMAP account under Gmail's
+              “Accounts and Import”, or point Proton Bridge and iCloud at the same place, and they arrive
+              in this inbox — one search bar, one assistant, one set of themes across all of them.
+            </p>
+            <a
+              href="https://mail.google.com/mail/u/0/#settings/accounts"
+              target="_blank"
+              rel="noreferrer"
+              className="press mt-4 inline-flex items-center gap-2 rounded-xl border border-border/60 bg-card/50 px-4 py-2 text-xs font-medium hover:border-primary/60"
+            >
+              <Inbox className="h-3.5 w-3.5 text-primary" /> Connect another mailbox <ArrowRight className="h-3.5 w-3.5" />
+            </a>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {["Outlook", "Proton", "iCloud", "Yahoo", "Any IMAP", "Google Workspace"].map((n) => (
+              <div key={n} className="lift rounded-2xl border border-border/50 bg-card/40 p-4 text-center text-xs font-medium">
+                {n}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Date range highlight */}
+
       <section className="reveal mx-auto max-w-5xl px-6 pb-16">
         <div className="glass grid gap-6 rounded-3xl p-8 shadow-xl md:grid-cols-2 md:items-center">
           <div>
