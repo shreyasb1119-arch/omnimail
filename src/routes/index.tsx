@@ -242,9 +242,31 @@ function App() {
 
   useEffect(() => { if (session) load(); }, [session, folder, activeQuery, load]);
 
-  const runSearch = () => {
-    setActiveQuery(transformQuery(query));
+  /** Smart search: auto-detects whether you're searching or talking to the AI. */
+  const runSearch = async (forceAi = false) => {
+    const q = query.trim();
+    if (!q) { setActiveQuery(""); setSearchExplain(""); return; }
+    if (!forceAi && !looksNaturalLanguage(q)) {
+      setSearchExplain("");
+      setActiveQuery(transformQuery(q));
+      return;
+    }
+    setSearching(true);
+    try {
+      const r = await aiNaturalSearch(q, userLabels.map((l) => l.name));
+      setSearchExplain(r.explain || "AI search");
+      if (r.sort === "oldest") settingsStore.set({ sortBy: "date" });
+      else if (r.sort === "sender") settingsStore.set({ sortBy: "sender" });
+      setOldestFirst(r.sort === "oldest");
+      setActiveQuery(r.query || transformQuery(q));
+    } catch (e: any) {
+      toast.error(e.message || "AI search failed");
+      setActiveQuery(transformQuery(q));
+    } finally {
+      setSearching(false);
+    }
   };
+
 
   const openMessage = useCallback(
     async (id: string) => {
