@@ -301,3 +301,82 @@ If the inbox is clean, output exactly "No subscription noise found.". No preambl
 export async function aiDraftScheduled(intent: string, to: string) {
   return aiWriteEmail({ intent: `Email to ${to}: ${intent}`, tone: "professional" });
 }
+
+/* ------------------------------------------------------------------ */
+/* Efficiency: batch triage — one round-trip instead of N.             */
+/* ------------------------------------------------------------------ */
+export async function aiTriageBatch(
+  items: { id: string; from: string; subject: string; snippet: string }[],
+): Promise<Record<string, Triage>> {
+  if (!items.length) return {};
+  const system = `Classify each email into exactly one label: high, low, or cold.
+- high: needs timely attention (real people, direct questions, deadlines, work, money)
+- low: newsletters, notifications, receipts, promos
+- cold: unsolicited cold outreach or sales pitches from strangers
+Return ONLY lines of the form "<number>:<label>", one per input email, no other text.`;
+  const list = items
+    .map((m, i) => `${i + 1}. from=${m.from} | subject=${m.subject} | ${m.snippet.slice(0, 140)}`)
+    .join("\n");
+  const raw = await aiChat(list, system);
+  const out: Record<string, Triage> = {};
+  for (const line of raw.split("\n")) {
+    const m = line.match(/(\d{1,3})\s*[:.\-]\s*(high|low|cold)/i);
+    if (!m) continue;
+    const item = items[parseInt(m[1], 10) - 1];
+    if (item) out[item.id] = m[2].toLowerCase() as Triage;
+  }
+  return out;
+}
+
+/** AI Translate — render an email in another language. */
+export async function aiTranslate(subject: string, body: string, language: string) {
+  const system = `Translate the email into ${language}. Keep formatting and tone. Output the translated subject on the first line prefixed "Subject: ", then a blank line, then the body. No commentary.`;
+  return aiChat(`Subject: ${subject}\n\n${body.slice(0, 6000)}`, system);
+}
+
+/** AI Tone & Intent Read — how the sender actually feels and what they want. */
+export async function aiToneRead(subject: string, from: string, body: string) {
+  const system = `Analyse the sender's tone and intent. Output exactly these four lines, nothing else:
+Tone: <2-4 words>
+Urgency: <low | medium | high>
+Real ask: <one sentence>
+Risk: <what happens if ignored, one short sentence>`;
+  return aiChat(`From: ${from}\nSubject: ${subject}\n\n${body.slice(0, 6000)}`, system);
+}
+
+/** AI Meeting Extractor — pulls a calendar-ready event out of an email. */
+export async function aiMeetingExtract(subject: string, from: string, body: string) {
+  const system = `Find any proposed meeting, call or event in this email.
+If found, output exactly:
+Title: <title>
+When: <date and time as written, plus timezone if stated>
+Where: <location or link, or "not stated">
+With: <attendees>
+Prep: <one line of what to prepare>
+If there is no meeting, output exactly "No meeting found.". No preamble.`;
+  return aiChat(`From: ${from}\nSubject: ${subject}\n\n${body.slice(0, 6000)}`, system);
+}
+
+/** AI Priority Sort — rank what to open first across the loaded inbox. */
+export async function aiPrioritySort(
+  items: { from: string; subject: string; snippet: string }[],
+): Promise<string> {
+  const system = `Rank these emails by what the reader should handle first.
+Output at most 8 lines: "<rank>. <sender> — <subject> — <why, max 10 words>".
+Ignore anything not worth opening today. No preamble.`;
+  const list = items.map((m, i) => `${i + 1}. from=${m.from} | ${m.subject} | ${m.snippet}`).join("\n");
+  return aiChat(list, system);
+}
+
+/** AI Attachment Brief — explains what the files in an email are and what to do with them. */
+export async function aiAttachmentBrief(
+  subject: string,
+  from: string,
+  files: { filename: string; mimeType: string; size: number }[],
+) {
+  if (!files.length) return "No attachments.";
+  const system = `Given an email and its attachment filenames, explain in at most 4 lines what these files most
+likely are, which one matters most, and the single action the reader should take. Plain text, no preamble.`;
+  const list = files.map((f) => `${f.filename} (${f.mimeType}, ${f.size} bytes)`).join("\n");
+  return aiChat(`From: ${from}\nSubject: ${subject}\nAttachments:\n${list}`, system);
+}

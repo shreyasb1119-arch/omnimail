@@ -5,9 +5,11 @@ import {
   Mail, Sparkles, Zap, Filter, Newspaper, MessageSquare, Clock, ListChecks,
   Radar, BellOff, Search, Folder, Command, Keyboard, Palette, Image as ImageIcon,
   Trash2, ShieldAlert, CheckCircle2, ArrowRight, Settings, Lock, Gauge,
+  Sun, Moon, Languages, CalendarClock, Paperclip, Download,
 } from "lucide-react";
 import { signIn } from "@/lib/gauth";
-import { useSettings } from "@/lib/store";
+import { useSettings, settingsStore, themeMode, DEFAULT_DARK, DEFAULT_LIGHT } from "@/lib/store";
+import { DemoInbox } from "@/components/mail/DemoInbox";
 
 const AI_FEATURES = [
   { icon: MessageSquare, title: "Chat Assistant that acts", body: "Type “star the first 10 messages” or “archive everything from LinkedIn.” It builds a plan, you confirm, it executes on your real inbox." },
@@ -19,6 +21,10 @@ const AI_FEATURES = [
   { icon: Zap, title: "Auto-Purge", body: "Cold outreach and promo junk get swept to Trash automatically — reversible, never permanent." },
   { icon: Newspaper, title: "Daily Digest", body: "A one-screen brief of your inbox, grouped by theme with urgent items first." },
   { icon: Sparkles, title: "AI Writer + Smart Replies", body: "Draft from an intent, rewrite the tone, autocomplete mid-sentence, or fire off a one-tap reply." },
+  { icon: Gauge, title: "Tone & Intent Read", body: "Tells you how the sender actually feels, how urgent it really is, what they're really asking, and what breaks if you ignore it." },
+  { icon: CalendarClock, title: "Meeting Extractor", body: "Pulls a calendar-ready event out of any email — title, time, place, attendees, and what to prepare." },
+  { icon: Languages, title: "Instant Translate", body: "Read any email in your language without leaving the thread, subject line included." },
+  { icon: Paperclip, title: "Attachment Brief", body: "Explains what the attached files are, which one actually matters, and the single action to take." },
 ];
 
 const CORE_FEATURES = [
@@ -34,6 +40,9 @@ const CORE_FEATURES = [
   { icon: Lock, title: "Nothing stored", body: "Your mail never touches our servers. Tokens live in your browser and refresh silently." },
   { icon: ShieldAlert, title: "Spam that stays gone", body: "Triage-driven purge learns what you never want to see again." },
   { icon: Mail, title: "Three-pane, on demand", body: "The reader only exists when you open something — the list gets the full screen otherwise." },
+  { icon: Download, title: "Files you can actually find", body: "Attachments get their own card grid with one-tap download, or save any file or email straight to PDF." },
+  { icon: Sun, title: "17 themes, light and dark", body: "Eleven dark presets, five light ones, and a one-tap toggle right here on this page." },
+  { icon: Sparkles, title: "AI menu, not AI clutter", body: "Every AI tool lives behind one button that drops down when you want it and disappears when you don't." },
 ];
 
 const VS_OTHERS = [
@@ -46,6 +55,9 @@ const VS_OTHERS = [
 export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
   const settings = useSettings();
   const [busy, setBusy] = useState(false);
+  const isLight = themeMode(settings.theme) === "light";
+  const toggleMode = () =>
+    settingsStore.set({ theme: isLight ? DEFAULT_DARK : DEFAULT_LIGHT });
 
   const go = async () => {
     if (!settings.clientId) {
@@ -73,6 +85,18 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
           </div>
           <span className="text-sm font-semibold tracking-tight">Shreyas Mail</span>
           <div className="ml-auto flex items-center gap-1">
+            <button
+              onClick={toggleMode}
+              aria-label={isLight ? "Switch to dark theme" : "Switch to light theme"}
+              className="press relative mr-1 flex h-8 w-14 items-center rounded-full border border-border/60 bg-card/50 px-1"
+            >
+              <span
+                className="absolute h-6 w-6 rounded-full bg-primary shadow-md transition-transform duration-300 ease-out"
+                style={{ transform: isLight ? "translateX(24px)" : "translateX(0)" }}
+              />
+              <Moon className="relative z-10 h-3.5 w-3.5 text-primary-foreground" />
+              <Sun className="relative z-10 ml-auto h-3.5 w-3.5 text-muted-foreground" />
+            </button>
             <Button variant="ghost" size="sm" className="gap-2" onClick={onOpenSettings}>
               <Settings className="h-3.5 w-3.5" /> Setup
             </Button>
@@ -87,7 +111,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       {/* Hero */}
       <section className="mx-auto max-w-4xl px-6 pb-16 pt-20 text-center">
         <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1 text-xs text-muted-foreground">
-          <Sparkles className="h-3 w-3 text-primary" /> Powered by Gmail + Gemini
+          <Sparkles className="h-3 w-3 animate-float text-primary" /> Powered by Gmail + Gemini
         </div>
         <h1 className="text-balance text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
           Email that does the work
@@ -112,6 +136,20 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
           Free, runs entirely in your browser. Bring your own Google Client ID in{" "}
           <button onClick={onOpenSettings} className="underline underline-offset-2 hover:text-foreground">Setup</button>.
         </p>
+      </section>
+
+      {/* Interactive demo */}
+      <section className="mx-auto max-w-6xl px-6 pb-16">
+        <div className="mb-6 text-center">
+          <h2 className="text-3xl font-semibold tracking-tight">Try it right here</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            A real, clickable Shreyas Mail. Open a message, star it, run any AI tool —
+            it all works on this page before you ever sign in.
+          </p>
+        </div>
+        <div className="animate-in-up">
+          <DemoInbox />
+        </div>
       </section>
 
       {/* What others can't do */}
@@ -159,12 +197,12 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       {/* AI features */}
       <section className="mx-auto max-w-6xl px-6 pb-16">
         <div className="mb-6 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight">Nine AI features, not one chat box</h2>
+          <h2 className="text-3xl font-semibold tracking-tight">Thirteen AI features, not one chat box</h2>
           <p className="mt-2 text-sm text-muted-foreground">Every one of them works on your live mail.</p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {AI_FEATURES.map((f) => (
-            <div key={f.title} className="glass rounded-2xl p-5 shadow-lg transition hover:-translate-y-0.5">
+            <div key={f.title} className="glass lift animate-in-up rounded-2xl p-5 shadow-lg">
               <div className="mb-3 grid h-9 w-9 place-items-center rounded-xl bg-primary/15 text-primary">
                 <f.icon className="h-4 w-4" />
               </div>
@@ -180,9 +218,9 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
         <div className="mb-6 text-center">
           <h2 className="text-3xl font-semibold tracking-tight">And the fundamentals, done properly</h2>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {CORE_FEATURES.map((f) => (
-            <div key={f.title} className="rounded-2xl border border-border/50 bg-card/40 p-4">
+            <div key={f.title} className="press rounded-2xl border border-border/50 bg-card/40 p-4 hover:border-primary/50">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <f.icon className="h-4 w-4 text-primary" /> {f.title}
               </div>

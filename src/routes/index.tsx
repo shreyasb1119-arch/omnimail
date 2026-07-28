@@ -9,7 +9,7 @@ import {
   Inbox, Star, Send, Trash2, PenSquare, Sparkles, Settings, Archive,
   Search, Mail, ShieldAlert, FileText, RefreshCw, Zap, Filter, ArrowLeft,
   Reply, Loader2, Command as CmdIcon, Info, Folder, Plus, MessageSquare, X, Newspaper, ListChecks,
-  Radar, BellOff, Clock,
+  Radar, BellOff, Clock, ChevronDown, Gauge, Languages, CalendarClock, Paperclip, Download,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -24,13 +24,14 @@ import {
 import {
   batchDelete, batchModify, deleteMessage, emptyTrash,
   listMessages, batchGetMessages, modifyMessage, trashMessage,
-  listLabels, createLabel, type GmailLabel, type ParsedMessage,
+  listLabels, createLabel, downloadAttachment, attachmentObjectUrl, type GmailLabel, type ParsedMessage,
 } from "@/lib/gmail";
 import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
 import { useSession, useSettings, sessionStore, getAiLabels, setAiLabel, type AiLabel } from "@/lib/store";
-import { aiTriage, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout } from "@/lib/ai";
+import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief } from "@/lib/ai";
 import type { AssistantAction } from "@/lib/ai";
 import { startScheduler, scheduleStore, useScheduled, type ScheduledMessage } from "@/lib/schedule";
+import { printMessageAsPdf, printImageAsPdf, printTextAsPdf } from "@/lib/printpdf";
 import { ThemeApplier } from "@/components/mail/ThemeApplier";
 import { SettingsDrawer } from "@/components/mail/SettingsDrawer";
 import { Compose, type ComposeInitial } from "@/components/mail/Compose";
@@ -145,7 +146,9 @@ function App() {
   const [purging, setPurging] = useState(false);
   const [confirmEmpty, setConfirmEmpty] = useState(false);
   const [cursorIndex, setCursorIndex] = useState(0);
-  const [aiBusy, setAiBusy] = useState<null | "summary" | "replies" | "digest" | "tasks" | "radar" | "scout">(null);
+  const [aiBusy, setAiBusy] = useState<null | "summary" | "replies" | "digest" | "tasks" | "radar" | "scout" | "priority" | "translate" | "tone" | "meeting" | "files">(null);
+  const [aiMenuOpen, setAiMenuOpen] = useState(false);
+  const [readerAiOpen, setReaderAiOpen] = useState(false);
   const [summary, setSummary] = useState<string>("");
   const [smartReplies, setSmartReplies] = useState<string[]>([]);
   const [digest, setDigest] = useState<string>("");
@@ -501,6 +504,95 @@ function App() {
     finally { setAiBusy(null); }
   };
 
+  const runPriority = async () => {
+    if (!messages.length) return;
+    setAiBusy("priority");
+    try {
+      const text = await aiPrioritySort(
+        messages.slice(0, 30).map((m) => ({ from: m.from, subject: m.subject, snippet: m.snippet })),
+      );
+      setScan({ title: "Priority Sort", text });
+    } catch (e: any) { toast.error(e.message || "Priority sort failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runTranslate = async () => {
+    if (!opened) return;
+    setAiBusy("translate");
+    try {
+      const text = await aiTranslate(opened.subject, opened.bodyText || opened.snippet, settings.translateTo || "English");
+      setScan({ title: `Translated to ${settings.translateTo || "English"}`, text });
+    } catch (e: any) { toast.error(e.message || "Translation failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runTone = async () => {
+    if (!opened) return;
+    setAiBusy("tone");
+    try {
+      const text = await aiToneRead(opened.subject, opened.from, opened.bodyText || opened.snippet);
+      setScan({ title: "Tone & intent", text });
+    } catch (e: any) { toast.error(e.message || "Tone read failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runMeeting = async () => {
+    if (!opened) return;
+    setAiBusy("meeting");
+    try {
+      const text = await aiMeetingExtract(opened.subject, opened.from, opened.bodyText || opened.snippet);
+      setScan({ title: "Meeting details", text });
+    } catch (e: any) { toast.error(e.message || "Meeting extract failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const runAttachmentBrief = async () => {
+    if (!opened || !opened.attachments.length) { toast.error("No attachments on this email"); return; }
+    setAiBusy("files");
+    try {
+      const text = await aiAttachmentBrief(opened.subject, opened.from, opened.attachments);
+      setScan({ title: "Attachment brief", text });
+    } catch (e: any) { toast.error(e.message || "Attachment brief failed"); }
+    finally { setAiBusy(null); }
+  };
+
+  const pendingScheduled = scheduled.filter((s) => s.status === "pending").length;
+
+  const AI_TOOLS = [
+    { id: "triage", label: "Smart Triage", icon: Filter, run: runTriage, busy: triaging, badge: 0,
+      info: "Scans your loaded messages in one batched call and tags each High, Low or Cold so you can spot what actually needs attention." },
+    { id: "purge", label: "Auto-Purge", icon: Zap, run: runAutoPurge, busy: purging, badge: 0,
+      info: "Uses AI triage to identify cold outreach and promotional junk in view, then moves them to Trash. Nothing is permanently deleted." },
+    { id: "priority", label: "Priority Sort", icon: Gauge, run: runPriority, busy: aiBusy === "priority", badge: 0,
+      info: "Ranks the messages in view by what you should handle first, with a one-line reason for each." },
+    { id: "digest", label: "Daily Digest", icon: Newspaper, run: runDigest, busy: aiBusy === "digest", badge: 0,
+      info: "Reads the messages currently in view and writes a short brief — what's urgent, what can wait, grouped by theme." },
+    { id: "radar", label: "Follow-up Radar", icon: Radar, run: runRadar, busy: aiBusy === "radar", badge: 0,
+      info: "Surfaces only the threads still waiting on your reply, most urgent first." },
+    { id: "scout", label: "Unsubscribe Scout", icon: BellOff, run: runScout, busy: aiBusy === "scout", badge: 0,
+      info: "Groups newsletters and automated senders, counts how much space they take, and tells you which to drop." },
+    { id: "queue", label: "Scheduled", icon: Clock, run: () => setQueueOpen(true), busy: false, badge: pendingScheduled,
+      info: "Ask the assistant to \"send X an email in 10 minutes\" — Gemini drafts it and it goes out on time. Cancel any time here." },
+  ];
+
+  const READER_TOOLS = [
+    { id: "summary", label: "Summarize", icon: ListChecks, run: runSummarize, busy: aiBusy === "summary",
+      info: "Condenses this email into 3 bullets plus the single action it asks of you." },
+    { id: "replies", label: "Smart replies", icon: MessageSquare, run: runSmartReplies, busy: aiBusy === "replies",
+      info: "Generates 3 one-line replies. Click one to open Compose pre-filled with it." },
+    { id: "tasks", label: "Action items", icon: ListChecks, run: runTasks, busy: aiBusy === "tasks",
+      info: "Pulls every task, deadline and commitment out of this email into a dated checklist." },
+    { id: "tone", label: "Tone read", icon: Gauge, run: runTone, busy: aiBusy === "tone",
+      info: "Tells you the sender's real tone, how urgent it truly is, what they're actually asking, and what breaks if you ignore it." },
+    { id: "meeting", label: "Meeting extract", icon: CalendarClock, run: runMeeting, busy: aiBusy === "meeting",
+      info: "Finds any proposed call or event and lays it out calendar-ready: title, time, place, attendees and prep." },
+    { id: "translate", label: "Translate", icon: Languages, run: runTranslate, busy: aiBusy === "translate",
+      info: "Rewrites the subject and body in your language without leaving the thread." },
+    { id: "files", label: "Attachment brief", icon: Paperclip, run: runAttachmentBrief, busy: aiBusy === "files",
+      info: "Explains what the attached files are, which one actually matters, and the single action to take." },
+    { id: "pdf", label: "Save as PDF", icon: FileText, run: () => opened && printMessageAsPdf({ subject: opened.subject, from: opened.from, to: opened.to, date: opened.date, bodyHtml: opened.bodyHtml, bodyText: opened.bodyText }), busy: false,
+      info: "Exports this email — headers and body — as a clean PDF via your browser's print dialog." },
+  ];
 
 
   const commands: Cmd[] = useMemo(() => [
@@ -604,120 +696,55 @@ function App() {
               </div>
             </div>
 
-            <div className="mt-4 space-y-2 rounded-xl border border-border/60 bg-card/40 p-3">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                <Sparkles className="h-3.5 w-3.5" /> AI
-              </div>
-
-              <Button
-                variant="default"
-                size="sm"
-                className="w-full justify-start gap-2"
-                onClick={() => setAssistantOpen(true)}
+            <div className="mt-4 rounded-xl border border-border/60 bg-card/40 p-2">
+              <button
+                onClick={() => setAiMenuOpen((o) => !o)}
+                className="press flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
               >
-                <MessageSquare className="h-3.5 w-3.5" /> Chat Assistant
-              </Button>
+                <Sparkles className="h-3.5 w-3.5 text-primary" /> AI features
+                <ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform duration-300 ${aiMenuOpen ? "rotate-180" : ""}`} />
+              </button>
 
-              <div className="flex items-center gap-1">
-                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runTriage} disabled={triaging}>
-                  {triaging ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Filter className="h-3.5 w-3.5" />} Smart Triage
-                </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-[220px] text-xs">
-                    Scans your first 25 loaded messages and tags each <b>High</b>, <b>Low</b>, or <b>Cold</b> so you can spot what actually needs attention.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
+              {aiMenuOpen && (
+                <div className="animate-drop stagger mt-2 space-y-1.5">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="press w-full justify-start gap-2"
+                    onClick={() => setAssistantOpen(true)}
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" /> Chat Assistant
+                  </Button>
 
-              <div className="flex items-center gap-1">
-                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runAutoPurge} disabled={purging}>
-                  {purging ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />} Auto-Purge
-                </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-[220px] text-xs">
-                    Uses AI triage to identify cold outreach and promotional junk in view, then moves them to Trash. Nothing is permanently deleted.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runDigest} disabled={aiBusy === "digest"}>
-                  {aiBusy === "digest" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Newspaper className="h-3.5 w-3.5" />} Daily Digest
-                </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-[220px] text-xs">
-                    Reads the messages currently in view and writes a short brief — what's urgent, what can wait, grouped by theme.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runRadar} disabled={aiBusy === "radar"}>
-                  {aiBusy === "radar" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Radar className="h-3.5 w-3.5" />} Follow-up Radar
-                </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-[220px] text-xs">
-                    Scans loaded messages and surfaces only the threads still waiting on your reply, most urgent first.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runScout} disabled={aiBusy === "scout"}>
-                  {aiBusy === "scout" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellOff className="h-3.5 w-3.5" />} Unsubscribe Scout
-                </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-[220px] text-xs">
-                    Groups newsletters and automated senders, counts how much space they take, and tells you which to drop.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={() => setQueueOpen(true)}>
-                  <Clock className="h-3.5 w-3.5" /> Scheduled
-                  {scheduled.some((s) => s.status === "pending") && (
-                    <span className="ml-auto rounded-full bg-primary/20 px-1.5 text-[10px] text-primary">
-                      {scheduled.filter((s) => s.status === "pending").length}
-                    </span>
-                  )}
-                </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-[220px] text-xs">
-                    Ask the assistant to "send X an email in 10 minutes" — Gemini drafts it and it goes out on time. Cancel any time here.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-
+                  {AI_TOOLS.map((t) => (
+                    <div key={t.id} className="flex items-center gap-1">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="press flex-1 justify-start gap-2"
+                        onClick={t.run}
+                        disabled={t.busy}
+                      >
+                        {t.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <t.icon className="h-3.5 w-3.5" />}
+                        {t.label}
+                        {t.badge ? (
+                          <span className="ml-auto rounded-full bg-primary/20 px-1.5 text-[10px] text-primary">{t.badge}</span>
+                        ) : null}
+                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-[220px] text-xs">{t.info}</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-
-            <div className="mt-auto space-y-2">
-              <button onClick={() => setCmdOpen(true)} className="flex w-full items-center gap-2 rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-xs text-muted-foreground transition hover:text-foreground">
-                <CmdIcon className="h-3.5 w-3.5" /> Command palette
-                <span className="ml-auto rounded border border-border px-1.5 font-mono text-[10px]">⌘K</span>
-              </button>
-              <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={() => setSettingsOpen(true)}>
-                <Settings className="h-4 w-4" /> Settings
-              </Button>
+            <div className="mt-auto pt-2 text-center text-[10px] text-muted-foreground/70">
+              Press <span className="rounded border border-border px-1 font-mono">⌘K</span> for everything, including Settings
             </div>
           </aside>
 
@@ -864,45 +891,34 @@ function App() {
                   </Button>
                 </div>
 
-                {/* AI toolbar */}
-                <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-card/40 px-3 py-2">
-                  <span className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    <Sparkles className="h-3.5 w-3.5" /> AI
-                  </span>
-                  <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={runSummarize} disabled={aiBusy === "summary"}>
-                    {aiBusy === "summary" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ListChecks className="h-3.5 w-3.5" />} Summarize
-                  </Button>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-[240px] text-xs">
-                      Condenses this email into 3 bullets plus the single action it asks of you.
-                    </TooltipContent>
-                  </Tooltip>
-                  <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={runSmartReplies} disabled={aiBusy === "replies"}>
-                    {aiBusy === "replies" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquare className="h-3.5 w-3.5" />} Smart replies
-                  </Button>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-[240px] text-xs">
-                      Generates 3 one-line replies. Click one to open Compose pre-filled with it.
-                    </TooltipContent>
-                  </Tooltip>
-                  <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={runTasks} disabled={aiBusy === "tasks"}>
-                    {aiBusy === "tasks" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ListChecks className="h-3.5 w-3.5" />} Action items
-                  </Button>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-[240px] text-xs">
-                      Pulls every task, deadline and commitment out of this email into a dated checklist.
-                    </TooltipContent>
-                  </Tooltip>
+                {/* AI toolbar — collapsed by default */}
+                <div className="mb-5 rounded-xl border border-border/60 bg-card/40 p-2">
+                  <button
+                    onClick={() => setReaderAiOpen((o) => !o)}
+                    className="press flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-primary"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" /> AI tools for this email
+                    <ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform duration-300 ${readerAiOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {readerAiOpen && (
+                    <div className="animate-drop stagger mt-2 grid gap-1.5 sm:grid-cols-2">
+                      {READER_TOOLS.map((t) => (
+                        <div key={t.id} className="flex items-center gap-1">
+                          <Button size="sm" variant="secondary" className="press h-8 flex-1 justify-start gap-1.5 text-xs" onClick={t.run} disabled={t.busy}>
+                            {t.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <t.icon className="h-3.5 w-3.5" />} {t.label}
+                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-[240px] text-xs">{t.info}</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+
 
 
                 {summary && (
@@ -943,6 +959,52 @@ function App() {
                   </div>
                   {labelBadge(aiLabels[opened.id])}
                 </div>
+                {opened.attachments.length > 0 && (
+                  <div className="mt-5">
+                    <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Paperclip className="h-3.5 w-3.5" /> {opened.attachments.length} attachment{opened.attachments.length === 1 ? "" : "s"}
+                    </div>
+                    <div className="stagger grid gap-2 sm:grid-cols-2">
+                      {opened.attachments.map((a) => (
+                        <div key={a.attachmentId} className="lift flex items-center gap-2 rounded-xl border border-border/60 bg-card/50 p-2.5">
+                          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
+                            <FileText className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-xs font-medium">{a.filename}</div>
+                            <div className="text-[10px] text-muted-foreground">{(a.size / 1024).toFixed(0)} KB</div>
+                          </div>
+                          <button
+                            title="Download"
+                            className="press rounded p-1.5 text-muted-foreground hover:text-primary"
+                            onClick={async () => {
+                              try { await downloadAttachment(opened.id, a); } catch (e: any) { toast.error(e.message || "Download failed"); }
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                          </button>
+                          <button
+                            title="Save as PDF"
+                            className="press rounded p-1.5 text-muted-foreground hover:text-primary"
+                            onClick={async () => {
+                              try {
+                                if (a.mimeType.startsWith("image/")) {
+                                  const url = await attachmentObjectUrl(opened.id, a);
+                                  printImageAsPdf(url, a.filename);
+                                } else {
+                                  printTextAsPdf(a.filename, `Attachment: ${a.filename}\nType: ${a.mimeType}\nSize: ${(a.size / 1024).toFixed(0)} KB\n\nFrom the email "${opened.subject}" by ${opened.from}.`);
+                                }
+                              } catch (e: any) { toast.error(e.message || "PDF export failed"); }
+                            }}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="mt-6 rounded-2xl border border-border/60 bg-card/40 p-6">
                   {opened.bodyHtml ? (
                     <div className="prose-mail text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: opened.bodyHtml }} />

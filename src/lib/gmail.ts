@@ -32,6 +32,14 @@ export interface GmailMessageMeta {
   payload?: any;
 }
 
+export interface Attachment {
+  attachmentId: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  inline: boolean;
+}
+
 export interface ParsedMessage {
   id: string;
   threadId: string;
@@ -46,6 +54,7 @@ export interface ParsedMessage {
   bodyHtml: string;
   unread: boolean;
   starred: boolean;
+  attachments: Attachment[];
 }
 
 function decodeB64(str: string) {
@@ -66,10 +75,26 @@ function decodeB64(str: string) {
   }
 }
 
-function walkParts(payload: any, out: { text: string; html: string }) {
+function walkParts(
+  payload: any,
+  out: { text: string; html: string; attachments: Attachment[] },
+) {
   if (!payload) return;
   const mime = payload.mimeType || "";
-  if (payload.body?.data) {
+  const filename = payload.filename || "";
+  const disposition =
+    (payload.headers || []).find((h: any) => h.name?.toLowerCase() === "content-disposition")
+      ?.value || "";
+
+  if (filename && payload.body?.attachmentId) {
+    out.attachments.push({
+      attachmentId: payload.body.attachmentId,
+      filename,
+      mimeType: mime || "application/octet-stream",
+      size: Number(payload.body.size || 0),
+      inline: /inline/i.test(disposition),
+    });
+  } else if (payload.body?.data) {
     const decoded = decodeB64(payload.body.data);
     if (mime === "text/plain" && !out.text) out.text = decoded;
     else if (mime === "text/html" && !out.html) out.html = decoded;
@@ -83,7 +108,7 @@ function header(payload: any, name: string): string {
 }
 
 export function parseMessage(m: GmailMessageMeta): ParsedMessage {
-  const parts = { text: "", html: "" };
+  const parts = { text: "", html: "", attachments: [] as Attachment[] };
   walkParts(m.payload, parts);
   const from = header(m.payload, "From");
   const emailMatch = from.match(/<([^>]+)>/);
@@ -101,6 +126,7 @@ export function parseMessage(m: GmailMessageMeta): ParsedMessage {
     bodyHtml: parts.html,
     unread: (m.labelIds || []).includes("UNREAD"),
     starred: (m.labelIds || []).includes("STARRED"),
+    attachments: parts.attachments,
   };
 }
 
@@ -229,3 +255,40 @@ export async function createLabel(name: string): Promise<GmailLabel> {
   });
 }
 
+
+/* ---------------- Attachments ---------------- */
+
+export async function getAttachmentBytes(messageId: string, attachmentId: string): Promise<Uint8Array> {
+  const r = await api<{ data: string; size: number }>(
+    `/messages/${messageId}/attachments/${attachmentId}`,
+  );
+  const b64 = (r.data || "").replace(/-/g, "+").replace(/_/g, "/");
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+export async function attachmentObjectUrl(messageId: string, att: Attachment): Promise<string> {
+  const bytes = await getAttachmentBytes(messageId, att.attachmentId);
+  const blob = new Blob([bytes as unknown as BlobPart], { type: att.mimeType });
+  return URL.createObjectURL(blob);
+}
+
+export async function downloadAttachment(messageId: string, att: Attachment) {
+  const url = await attachmentObjectUrl(messageId, att);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = att.filename || "attachment";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+export function formatBytes(n: number) {
+  if (!n) return "";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}

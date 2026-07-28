@@ -1,12 +1,43 @@
 import { useSyncExternalStore } from "react";
 
-export type Theme = "superhuman" | "nordic" | "oled" | "cyberpunk" | "forest" | "ocean";
+export type Theme =
+  // dark
+  | "superhuman" | "oled" | "cyberpunk" | "forest" | "ocean"
+  | "midnight" | "ember" | "aurora" | "grape" | "carbon" | "dusk"
+  // light
+  | "nordic" | "paper" | "linen" | "mint" | "blossom";
+
+export const THEMES: { id: Theme; label: string; mode: "dark" | "light"; swatch: string[] }[] = [
+  { id: "superhuman", label: "Superhuman", mode: "dark", swatch: ["#1a1c26", "#e05a4a"] },
+  { id: "oled", label: "OLED Midnight", mode: "dark", swatch: ["#000000", "#e2b83f"] },
+  { id: "cyberpunk", label: "Cyberpunk", mode: "dark", swatch: ["#2a1543", "#f13ab4"] },
+  { id: "forest", label: "Forest", mode: "dark", swatch: ["#1e2e26", "#5cb98a"] },
+  { id: "ocean", label: "Ocean", mode: "dark", swatch: ["#152438", "#4aa4d6"] },
+  { id: "midnight", label: "Midnight Indigo", mode: "dark", swatch: ["#0f1024", "#6d6cf5"] },
+  { id: "ember", label: "Charcoal Ember", mode: "dark", swatch: ["#1b1917", "#f2743a"] },
+  { id: "aurora", label: "Aurora", mode: "dark", swatch: ["#0e1a1e", "#4de3b0"] },
+  { id: "grape", label: "Grape Soda", mode: "dark", swatch: ["#1d1330", "#b57cff"] },
+  { id: "carbon", label: "Carbon Mono", mode: "dark", swatch: ["#131313", "#dcdcdc"] },
+  { id: "dusk", label: "Desert Dusk", mode: "dark", swatch: ["#241a1d", "#ff9d7a"] },
+  { id: "nordic", label: "Nordic", mode: "light", swatch: ["#f7f9fc", "#4c78c9"] },
+  { id: "paper", label: "Paper & Ink", mode: "light", swatch: ["#f5f3ee", "#1c1c1c"] },
+  { id: "linen", label: "Warm Linen", mode: "light", swatch: ["#faf7f1", "#b0764a"] },
+  { id: "mint", label: "Fresh Mint", mode: "light", swatch: ["#f2fbf7", "#12a37a"] },
+  { id: "blossom", label: "Blossom", mode: "light", swatch: ["#fdf5f8", "#d4638d"] },
+];
+
+export const DEFAULT_DARK: Theme = "superhuman";
+export const DEFAULT_LIGHT: Theme = "nordic";
+export function themeMode(t: Theme): "dark" | "light" {
+  return THEMES.find((x) => x.id === t)?.mode ?? "dark";
+}
 
 export interface Settings {
   clientId: string;
   geminiKey: string;
   theme: Theme;
   avatarUrl: string;
+  translateTo: string;
   wallpaperUrl: string;
   wallpaperOpacity: number;
   wallpaperBlur: number;
@@ -33,6 +64,7 @@ const defaultSettings: Settings = {
   geminiKey: "",
   theme: "superhuman",
   avatarUrl: "",
+  translateTo: "English",
   wallpaperUrl: "",
   wallpaperOpacity: 40,
   wallpaperBlur: 0,

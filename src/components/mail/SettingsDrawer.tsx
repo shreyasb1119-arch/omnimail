@@ -5,18 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
-import { settingsStore, useSettings, type Theme } from "@/lib/store";
+import { settingsStore, useSettings, THEMES, type Theme } from "@/lib/store";
 import { toast } from "sonner";
 import { signOut } from "@/lib/gauth";
 
-const themes: { id: Theme; label: string; swatch: string[] }[] = [
-  { id: "superhuman", label: "Superhuman Dark", swatch: ["#1a1c26", "#e05a4a"] },
-  { id: "nordic", label: "Nordic Light", swatch: ["#f7f9fc", "#4c78c9"] },
-  { id: "oled", label: "OLED Midnight", swatch: ["#000000", "#e2b83f"] },
-  { id: "cyberpunk", label: "Cyberpunk Glass", swatch: ["#2a1543", "#f13ab4"] },
-  { id: "forest", label: "Forest Green", swatch: ["#1e2e26", "#5cb98a"] },
-  { id: "ocean", label: "Ocean Blue", swatch: ["#152438", "#4aa4d6"] },
-];
 
 export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const s = useSettings();
@@ -107,27 +99,33 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
           </section>
           <Separator />
 
-          <section className="space-y-3">
+          <section className="space-y-4">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Theme</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {themes.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => settingsStore.set({ theme: t.id })}
-                  className={`group relative rounded-xl border p-3 text-left transition hover:border-primary ${
-                    s.theme === t.id ? "border-primary ring-2 ring-primary/40" : "border-border"
-                  }`}
-                >
-                  <div className="mb-2 flex gap-1">
-                    {t.swatch.map((c) => (
-                      <div key={c} className="h-6 w-6 rounded-md border border-border/40" style={{ background: c }} />
-                    ))}
-                  </div>
-                  <div className="text-sm font-medium">{t.label}</div>
-                </button>
-              ))}
-            </div>
+            {(["dark", "light"] as const).map((mode) => (
+              <div key={mode} className="space-y-2">
+                <div className="text-[11px] font-medium capitalize text-muted-foreground">{mode} themes</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {THEMES.filter((t) => t.mode === mode).map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => settingsStore.set({ theme: t.id as Theme })}
+                      className={`press group relative rounded-xl border p-2.5 text-left hover:border-primary ${
+                        s.theme === t.id ? "border-primary ring-2 ring-primary/40" : "border-border"
+                      }`}
+                    >
+                      <div className="mb-2 flex gap-1">
+                        {t.swatch.map((c) => (
+                          <div key={c} className="h-6 w-6 rounded-md border border-border/40" style={{ background: c }} />
+                        ))}
+                      </div>
+                      <div className="text-xs font-medium">{t.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </section>
+
           <Separator />
           <section className="space-y-4">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Wallpaper</h3>
