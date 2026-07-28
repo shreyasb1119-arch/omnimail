@@ -5,18 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
-import { settingsStore, useSettings, type Theme } from "@/lib/store";
+import { settingsStore, useSettings, THEMES, type Theme } from "@/lib/store";
 import { toast } from "sonner";
 import { signOut } from "@/lib/gauth";
 
-const themes: { id: Theme; label: string; swatch: string[] }[] = [
-  { id: "superhuman", label: "Superhuman Dark", swatch: ["#1a1c26", "#e05a4a"] },
-  { id: "nordic", label: "Nordic Light", swatch: ["#f7f9fc", "#4c78c9"] },
-  { id: "oled", label: "OLED Midnight", swatch: ["#000000", "#e2b83f"] },
-  { id: "cyberpunk", label: "Cyberpunk Glass", swatch: ["#2a1543", "#f13ab4"] },
-  { id: "forest", label: "Forest Green", swatch: ["#1e2e26", "#5cb98a"] },
-  { id: "ocean", label: "Ocean Blue", swatch: ["#152438", "#4aa4d6"] },
-];
 
 export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const s = useSettings();
