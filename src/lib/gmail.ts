@@ -108,7 +108,7 @@ function header(payload: any, name: string): string {
 }
 
 export function parseMessage(m: GmailMessageMeta): ParsedMessage {
-  const parts = { text: "", html: "" };
+  const parts = { text: "", html: "", attachments: [] as Attachment[] };
   walkParts(m.payload, parts);
   const from = header(m.payload, "From");
   const emailMatch = from.match(/<([^>]+)>/);
@@ -126,6 +126,7 @@ export function parseMessage(m: GmailMessageMeta): ParsedMessage {
     bodyHtml: parts.html,
     unread: (m.labelIds || []).includes("UNREAD"),
     starred: (m.labelIds || []).includes("STARRED"),
+    attachments: parts.attachments,
   };
 }
 
