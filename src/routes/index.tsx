@@ -604,120 +604,55 @@ function App() {
               </div>
             </div>
 
-            <div className="mt-4 space-y-2 rounded-xl border border-border/60 bg-card/40 p-3">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                <Sparkles className="h-3.5 w-3.5" /> AI
-              </div>
-
-              <Button
-                variant="default"
-                size="sm"
-                className="w-full justify-start gap-2"
-                onClick={() => setAssistantOpen(true)}
+            <div className="mt-4 rounded-xl border border-border/60 bg-card/40 p-2">
+              <button
+                onClick={() => setAiMenuOpen((o) => !o)}
+                className="press flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
               >
-                <MessageSquare className="h-3.5 w-3.5" /> Chat Assistant
-              </Button>
+                <Sparkles className="h-3.5 w-3.5 text-primary" /> AI features
+                <ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform duration-300 ${aiMenuOpen ? "rotate-180" : ""}`} />
+              </button>
 
-              <div className="flex items-center gap-1">
-                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runTriage} disabled={triaging}>
-                  {triaging ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Filter className="h-3.5 w-3.5" />} Smart Triage
-                </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-[220px] text-xs">
-                    Scans your first 25 loaded messages and tags each <b>High</b>, <b>Low</b>, or <b>Cold</b> so you can spot what actually needs attention.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
+              {aiMenuOpen && (
+                <div className="animate-drop stagger mt-2 space-y-1.5">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="press w-full justify-start gap-2"
+                    onClick={() => setAssistantOpen(true)}
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" /> Chat Assistant
+                  </Button>
 
-              <div className="flex items-center gap-1">
-                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runAutoPurge} disabled={purging}>
-                  {purging ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />} Auto-Purge
-                </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-[220px] text-xs">
-                    Uses AI triage to identify cold outreach and promotional junk in view, then moves them to Trash. Nothing is permanently deleted.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runDigest} disabled={aiBusy === "digest"}>
-                  {aiBusy === "digest" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Newspaper className="h-3.5 w-3.5" />} Daily Digest
-                </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-[220px] text-xs">
-                    Reads the messages currently in view and writes a short brief — what's urgent, what can wait, grouped by theme.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runRadar} disabled={aiBusy === "radar"}>
-                  {aiBusy === "radar" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Radar className="h-3.5 w-3.5" />} Follow-up Radar
-                </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-[220px] text-xs">
-                    Scans loaded messages and surfaces only the threads still waiting on your reply, most urgent first.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={runScout} disabled={aiBusy === "scout"}>
-                  {aiBusy === "scout" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellOff className="h-3.5 w-3.5" />} Unsubscribe Scout
-                </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-[220px] text-xs">
-                    Groups newsletters and automated senders, counts how much space they take, and tells you which to drop.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <Button variant="secondary" size="sm" className="flex-1 justify-start gap-2" onClick={() => setQueueOpen(true)}>
-                  <Clock className="h-3.5 w-3.5" /> Scheduled
-                  {scheduled.some((s) => s.status === "pending") && (
-                    <span className="ml-auto rounded-full bg-primary/20 px-1.5 text-[10px] text-primary">
-                      {scheduled.filter((s) => s.status === "pending").length}
-                    </span>
-                  )}
-                </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-[220px] text-xs">
-                    Ask the assistant to "send X an email in 10 minutes" — Gemini drafts it and it goes out on time. Cancel any time here.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-
+                  {AI_TOOLS.map((t) => (
+                    <div key={t.id} className="flex items-center gap-1">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="press flex-1 justify-start gap-2"
+                        onClick={t.run}
+                        disabled={t.busy}
+                      >
+                        {t.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <t.icon className="h-3.5 w-3.5" />}
+                        {t.label}
+                        {t.badge ? (
+                          <span className="ml-auto rounded-full bg-primary/20 px-1.5 text-[10px] text-primary">{t.badge}</span>
+                        ) : null}
+                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-[220px] text-xs">{t.info}</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-
-            <div className="mt-auto space-y-2">
-              <button onClick={() => setCmdOpen(true)} className="flex w-full items-center gap-2 rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-xs text-muted-foreground transition hover:text-foreground">
-                <CmdIcon className="h-3.5 w-3.5" /> Command palette
-                <span className="ml-auto rounded border border-border px-1.5 font-mono text-[10px]">⌘K</span>
-              </button>
-              <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={() => setSettingsOpen(true)}>
-                <Settings className="h-4 w-4" /> Settings
-              </Button>
+            <div className="mt-auto pt-2 text-center text-[10px] text-muted-foreground/70">
+              Press <span className="rounded border border-border px-1 font-mono">⌘K</span> for everything, including Settings
             </div>
           </aside>
 
