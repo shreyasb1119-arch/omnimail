@@ -255,3 +255,40 @@ export async function createLabel(name: string): Promise<GmailLabel> {
   });
 }
 
+
+/* ---------------- Attachments ---------------- */
+
+export async function getAttachmentBytes(messageId: string, attachmentId: string): Promise<Uint8Array> {
+  const r = await api<{ data: string; size: number }>(
+    `/messages/${messageId}/attachments/${attachmentId}`,
+  );
+  const b64 = (r.data || "").replace(/-/g, "+").replace(/_/g, "/");
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+export async function attachmentObjectUrl(messageId: string, att: Attachment): Promise<string> {
+  const bytes = await getAttachmentBytes(messageId, att.attachmentId);
+  const blob = new Blob([bytes as unknown as BlobPart], { type: att.mimeType });
+  return URL.createObjectURL(blob);
+}
+
+export async function downloadAttachment(messageId: string, att: Attachment) {
+  const url = await attachmentObjectUrl(messageId, att);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = att.filename || "attachment";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+export function formatBytes(n: number) {
+  if (!n) return "";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
