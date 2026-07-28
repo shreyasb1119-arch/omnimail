@@ -60,11 +60,6 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
     settingsStore.set({ theme: isLight ? DEFAULT_DARK : DEFAULT_LIGHT });
 
   const go = async () => {
-    if (!settings.clientId) {
-      toast.error("Add your Google OAuth Client ID in Settings first.");
-      onOpenSettings();
-      return;
-    }
     setBusy(true);
     try {
       await signIn(true);
@@ -74,6 +69,25 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       setBusy(false);
     }
   };
+
+  // Reveal sections as they scroll into view.
+  useEffect(() => {
+    const els = Array.from(document.querySelectorAll<HTMLElement>(".reveal"));
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            e.target.classList.add("reveal-in");
+            io.unobserve(e.target);
+          }
+        }
+      },
+      { rootMargin: "0px 0px -12% 0px", threshold: 0.08 },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+
 
   return (
     <div className="relative min-h-screen overflow-y-auto text-foreground">
