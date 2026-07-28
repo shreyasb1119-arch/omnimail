@@ -12,7 +12,12 @@ import { useSettings, settingsStore, themeMode, DEFAULT_DARK, DEFAULT_LIGHT } fr
 import { DemoInbox } from "@/components/mail/DemoInbox";
 
 const AI_FEATURES = [
+  { icon: Search, title: "Natural-language finder", body: "“Find my oldest emails from Spotify.” The search bar decides on its own whether you're searching or asking, then builds the Gmail query for you." },
+  { icon: Wand2, title: "Full reply drafting", body: "One tap turns an open email into a complete, ready-to-send reply that answers every question in it." },
+  { icon: Crown, title: "VIP Radar", body: "Separates the humans who matter — clients, colleagues, money — from the automated noise around them." },
+  { icon: BarChart3, title: "Inbox Report", body: "An analytics read on your mail: volume, top senders, recurring themes and where your time actually goes." },
   { icon: MessageSquare, title: "Chat Assistant that acts", body: "Type “star the first 10 messages” or “archive everything from LinkedIn.” It builds a plan, you confirm, it executes on your real inbox." },
+
   { icon: Clock, title: "AI Scheduled Send", body: "“Send Priya a note about Friday in 10 minutes.” Gemini drafts it, we hold it, and it goes out exactly on time — no draft folder babysitting." },
   { icon: Radar, title: "Follow-up Radar", body: "Scans what's loaded and surfaces only the threads still waiting on your reply, ranked by urgency." },
   { icon: ListChecks, title: "Action Extractor", body: "Turns any email into a clean list of tasks, deadlines and commitments with their due dates." },
