@@ -380,3 +380,40 @@ likely are, which one matters most, and the single action the reader should take
   const list = files.map((f) => `${f.filename} (${f.mimeType}, ${f.size} bytes)`).join("\n");
   return aiChat(`From: ${from}\nSubject: ${subject}\nAttachments:\n${list}`, system);
 }
+
+/** AI Security Check — flags phishing, spoofing and social-engineering cues in one email. */
+export async function aiSecurityCheck(subject: string, from: string, body: string) {
+  const system = `You are an email security analyst. Judge whether this message looks like phishing, spoofing,
+invoice fraud or social engineering.
+Output exactly:
+Verdict: Safe | Suspicious | Dangerous
+Signals: <up to 3 short bullets of concrete evidence>
+Do: <one line telling the reader what to do>
+No preamble.`;
+  return aiChat(`From: ${from}\nSubject: ${subject}\n\n${body.slice(0, 6000)}`, system);
+}
+
+/** AI Sender Brief — who this person is and how you've dealt with them. */
+export async function aiSenderBrief(from: string, items: { subject: string; snippet: string }[]) {
+  const system = `Given every loaded email from one sender, write a short profile.
+Output exactly:
+Who: <one line>
+They usually want: <one line>
+Open loops: <up to 3 short bullets, or "None">
+Suggested stance: <one line>
+No preamble.`;
+  const list = items.slice(0, 20).map((m, i) => `${i + 1}. ${m.subject} — ${m.snippet}`).join("\n");
+  return aiChat(`Sender: ${from}\n\n${list}`, system);
+}
+
+/** AI Cleanup Plan — a concrete plan for getting the visible inbox to zero. */
+export async function aiCleanupPlan(items: { from: string; subject: string; snippet: string }[]) {
+  const system = `You are an inbox cleanup planner. Given the emails in view, propose a concrete plan.
+Output exactly three sections, each with short bullets:
+Archive now:
+Reply today:
+Unsubscribe or trash:
+Reference senders and subjects. Maximum 12 bullets total. No preamble.`;
+  const list = items.map((m, i) => `${i + 1}. from=${m.from} | ${m.subject} | ${m.snippet}`).join("\n");
+  return aiChat(list, system);
+}
