@@ -590,7 +590,7 @@ function App() {
       info: "Rewrites the subject and body in your language without leaving the thread." },
     { id: "files", label: "Attachment brief", icon: Paperclip, run: runAttachmentBrief, busy: aiBusy === "files",
       info: "Explains what the attached files are, which one actually matters, and the single action to take." },
-    { id: "pdf", label: "Save as PDF", icon: FileText, run: () => opened && printMessageAsPdf({ subject: opened.subject, from: opened.from, to: opened.to, date: new Date(opened.date).toLocaleString(), html: opened.bodyHtml, text: opened.bodyText }), busy: false,
+    { id: "pdf", label: "Save as PDF", icon: FileText, run: () => opened && printMessageAsPdf({ subject: opened.subject, from: opened.from, to: opened.to, date: opened.date, bodyHtml: opened.bodyHtml, bodyText: opened.bodyText }), busy: false,
       info: "Exports this email — headers and body — as a clean PDF via your browser's print dialog." },
   ];
 
