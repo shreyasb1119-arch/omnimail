@@ -62,9 +62,10 @@ async function fetchProfile(accessToken: string) {
 }
 
 export async function signIn(interactive = true): Promise<AuthSession> {
-  const { clientId } = settingsStore.get();
-  if (!clientId) throw new Error("Add your Google OAuth Client ID in Settings first.");
+  const clientId = await resolveClientId();
+  if (!clientId) throw new Error("No Google OAuth Client ID is configured. Add one in Settings.");
   await loadGis();
+
 
   return new Promise<AuthSession>((resolve, reject) => {
     const tokenClient = window.google.accounts.oauth2.initTokenClient({
