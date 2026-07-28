@@ -5,7 +5,7 @@ import {
   Mail, Sparkles, Zap, Filter, Newspaper, MessageSquare, Clock, ListChecks,
   Radar, BellOff, Search, Folder, Command, Keyboard, Palette, Image as ImageIcon,
   Trash2, ShieldAlert, CheckCircle2, ArrowRight, Settings, Lock, Gauge,
-  Sun, Moon, Languages, CalendarClock, Paperclip, Download,
+  Sun, Moon, Languages, CalendarClock, Paperclip, Download, ShieldCheck, UserSearch, Sparkle,
 } from "lucide-react";
 import { signIn } from "@/lib/gauth";
 import { useSettings, settingsStore, themeMode, DEFAULT_DARK, DEFAULT_LIGHT } from "@/lib/store";
@@ -24,6 +24,9 @@ const AI_FEATURES = [
   { icon: Gauge, title: "Tone & Intent Read", body: "Tells you how the sender actually feels, how urgent it really is, what they're really asking, and what breaks if you ignore it." },
   { icon: CalendarClock, title: "Meeting Extractor", body: "Pulls a calendar-ready event out of any email — title, time, place, attendees, and what to prepare." },
   { icon: Languages, title: "Instant Translate", body: "Read any email in your language without leaving the thread, subject line included." },
+  { icon: ShieldCheck, title: "Security Check", body: "Scans any email for phishing, spoofing and invoice-fraud signals, then tells you plainly whether to trust it." },
+  { icon: UserSearch, title: "Sender Brief", body: "Profiles whoever just emailed you from every message they've sent: what they usually want, and which threads are still open." },
+  { icon: Sparkle, title: "Cleanup Plan", body: "Turns the inbox in front of you into a plan — archive now, reply today, unsubscribe — instead of a wall of unread mail." },
   { icon: Paperclip, title: "Attachment Brief", body: "Explains what the attached files are, which one actually matters, and the single action to take." },
 ];
 
@@ -34,14 +37,14 @@ const CORE_FEATURES = [
   { icon: Folder, title: "Real folders", body: "Create and nest Gmail labels from the sidebar, or let the assistant file mail for you." },
   { icon: Trash2, title: "Empty Trash now", body: "Actually empty it. No 30-day wait, no digging through Gmail settings." },
   { icon: CheckCircle2, title: "Bulk everything", body: "Select all, archive, trash, mark read — across every message in view." },
-  { icon: Palette, title: "Six themes", body: "Superhuman Dark, Nordic Light, OLED Midnight, Cyberpunk Glass, Forest, Ocean." },
+  { icon: Palette, title: "Twenty themes", body: "Thirteen dark presets and seven light ones, from OLED Midnight to Soft Sand — switch in a tap." },
   { icon: ImageIcon, title: "Custom wallpapers", body: "Your own image with live blur and visibility sliders, per-pane glass controls, custom avatar." },
   { icon: Gauge, title: "Full history access", body: "Reads and writes across your entire Gmail archive — not just the last 30 days." },
   { icon: Lock, title: "Nothing stored", body: "Your mail never touches our servers. Tokens live in your browser and refresh silently." },
   { icon: ShieldAlert, title: "Spam that stays gone", body: "Triage-driven purge learns what you never want to see again." },
   { icon: Mail, title: "Three-pane, on demand", body: "The reader only exists when you open something — the list gets the full screen otherwise." },
   { icon: Download, title: "Files you can actually find", body: "Attachments get their own card grid with one-tap download, or save any file or email straight to PDF." },
-  { icon: Sun, title: "17 themes, light and dark", body: "Eleven dark presets, five light ones, and a one-tap toggle right here on this page." },
+  { icon: Sun, title: "Ten built-in wallpapers", body: "Pick a ready-made backdrop, or bring your own image and tune its blur and visibility." },
   { icon: Sparkles, title: "AI menu, not AI clutter", body: "Every AI tool lives behind one button that drops down when you want it and disappears when you don't." },
 ];
 
@@ -212,7 +215,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       {/* AI features */}
       <section className="reveal mx-auto max-w-6xl px-6 pb-16">
         <div className="mb-6 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight">Thirteen AI features, not one chat box</h2>
+          <h2 className="text-3xl font-semibold tracking-tight">Sixteen AI features, not one chat box</h2>
           <p className="mt-2 text-sm text-muted-foreground">Every one of them works on your live mail.</p>
         </div>
         <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
