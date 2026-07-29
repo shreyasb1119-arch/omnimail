@@ -751,7 +751,8 @@ function App() {
         <div className="animate-drop flex w-full justify-center">
           <div
             onClick={() => { if (!searchOpen) { setSearchOpen(true); setTimeout(() => document.getElementById("search-input")?.focus(), 60); } }}
-            className={`glass-cmd flex items-center gap-2 rounded-full shadow-xl ring-1 ring-border/40 transition-all duration-300 ease-out focus-within:ring-2 focus-within:ring-primary/40 ${searchOpen ? "w-full max-w-2xl px-4 py-2" : "w-auto cursor-pointer px-3 py-1.5 hover:ring-primary/40"}`} gap-2 rounded-full px-4 py-2 shadow-xl ring-1 ring-border/40 transition focus-within:ring-2 focus-within:ring-primary/40">
+            className={`glass-cmd flex items-center gap-2 rounded-full shadow-xl ring-1 ring-border/40 transition-all duration-300 ease-out focus-within:ring-2 focus-within:ring-primary/40 ${searchOpen ? "w-full max-w-2xl px-4 py-2" : "w-auto cursor-pointer px-3 py-1.5 hover:ring-primary/40"}`}
+          >
             {searching ? (
               <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
             ) : looksNaturalLanguage(query) ? (
