@@ -1215,23 +1215,49 @@ function App() {
                     <Sparkles className="h-3.5 w-3.5" /> AI tools for this email
                     <ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform duration-300 ${readerAiOpen ? "rotate-180" : ""}`} />
                   </button>
-                  {readerAiOpen && (
-                    <div className="animate-drop stagger mt-2 grid gap-1.5 sm:grid-cols-2">
-                      {READER_TOOLS.map((t) => (
-                        <div key={t.id} className="flex items-center gap-1">
-                          <Button size="sm" variant="secondary" className="press h-8 flex-1 justify-start gap-1.5 text-xs" onClick={t.run} disabled={t.busy}>
-                            {t.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <t.icon className="h-3.5 w-3.5" />} {t.label}
-                          </Button>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-[240px] text-xs">{t.info}</TooltipContent>
-                          </Tooltip>
-                        </div>
-                      ))}
+                  <div className="collapsible" data-open={readerAiOpen}>
+                    <div className="collapsible-inner">
+                      <div className="mt-2 space-y-1.5">
+                        {READER_GROUPS.map((g) => {
+                          const tools = READER_TOOLS.filter((t) => g.ids.includes(t.id));
+                          if (!tools.length) return null;
+                          const open = openReaderGroup === g.name;
+                          return (
+                            <div key={g.name} className="rounded-lg border border-border/50 bg-background/30">
+                              <button
+                                onClick={() => setOpenReaderGroup(open ? null : g.name)}
+                                className="press flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                              >
+                                {g.name}
+                                <span className="ml-auto text-[10px] font-normal normal-case text-muted-foreground/60">{tools.length}</span>
+                                <ChevronDown className={`h-3 w-3 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
+                              </button>
+                              <div className="collapsible" data-open={open}>
+                                <div className="collapsible-inner">
+                                  <div className="grid gap-1.5 p-1.5 pt-0 sm:grid-cols-2">
+                                    {tools.map((t) => (
+                                      <div key={t.id} className="flex items-center gap-1">
+                                        <Button size="sm" variant="secondary" className="press h-8 flex-1 justify-start gap-1.5 text-xs" onClick={t.run} disabled={t.busy}>
+                                          {t.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <t.icon className="h-3.5 w-3.5" />} {t.label}
+                                        </Button>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                                          </TooltipTrigger>
+                                          <TooltipContent className="max-w-[240px] text-xs">{t.info}</TooltipContent>
+                                        </Tooltip>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  )}
+                  </div>
+
                 </div>
 
 
