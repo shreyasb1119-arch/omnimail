@@ -2,11 +2,14 @@ import { useSyncExternalStore } from "react";
 
 export type Theme =
   // dark
-  | "superhuman" | "oled" | "cyberpunk" | "forest" | "ocean"
+  | "mono" | "superhuman" | "oled" | "cyberpunk" | "forest" | "ocean"
   | "midnight" | "ember" | "aurora" | "grape" | "carbon" | "dusk"
-  | "slate" | "royal"
+  | "slate" | "royal" | "obsidian" | "moss" | "cocoa"
   // light
-  | "nordic" | "paper" | "linen" | "mint" | "blossom" | "sand" | "sky";
+  | "nordic" | "paper" | "linen" | "mint" | "blossom" | "sand" | "sky"
+  | "porcelain" | "peach" | "sage"
+  // user-defined
+  | "custom";
 
 export const THEMES: { id: Theme; label: string; mode: "dark" | "light"; swatch: string[] }[] = [
   { id: "superhuman", label: "Superhuman", mode: "dark", swatch: ["#1a1c26", "#e05a4a"] },
