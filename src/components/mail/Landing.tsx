@@ -6,7 +6,7 @@ import {
   Radar, BellOff, Search, Folder, Command, Keyboard, Palette, Image as ImageIcon,
   Trash2, ShieldAlert, CheckCircle2, ArrowRight, Settings, Lock, Gauge,
   Sun, Moon, Languages, CalendarClock, Paperclip, Download, ShieldCheck, UserSearch, Sparkle,
-  Wand2, Crown, BarChart3, Inbox,
+  Wand2, Crown, BarChart3, Inbox, FileText,
 
 } from "lucide-react";
 import { signIn } from "@/lib/gauth";
