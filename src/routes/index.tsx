@@ -740,7 +740,17 @@ function App() {
       info: "Clusters resends and repeated notification chains and tells you which single copy to keep." },
     { id: "queue", label: "Scheduled", icon: Clock, run: () => setQueueOpen(true), busy: false, badge: pendingScheduled,
       info: "Ask the assistant to \"send X an email in 10 minutes\" — Gemini drafts it and it goes out on time. Cancel any time here." },
+    { id: "waiting", label: "Waiting On Them", icon: Clock, run: () => runInboxTool("waiting", "Waiting on them", aiWaitingOnThem), busy: aiBusy === "waiting", badge: 0,
+      info: "The mirror of Follow-up Radar: threads where you already replied and someone else still owes you an answer." },
+    { id: "recap", label: "Weekly Recap", icon: Newspaper, run: () => runInboxTool("recap", "Weekly recap", aiWeeklyRecap), busy: aiBusy === "recap", badge: 0,
+      info: "A week-in-review of your mail: what moved, what stalled, and the three things to carry into next week." },
+    { id: "riskscan", label: "Inbox Risk Scan", icon: ShieldCheck, run: () => runInboxTool("riskscan", "Inbox risk scan", aiInboxRiskScan), busy: aiBusy === "riskscan", badge: 0,
+      info: "Sweeps every loaded message for phishing, spoofed senders and invoice fraud instead of checking one email at a time." },
+    { id: "opps", label: "Opportunity Finder", icon: Crown, run: () => runInboxTool("opps", "Opportunity finder", aiOpportunityFinder), busy: aiBusy === "opps", badge: 0,
+      info: "Digs out warm intros, deals, partnerships and invitations buried in the noise, with the one move to make on each." },
   ];
+
+
 
   const READER_TOOLS = [
     { id: "replydraft", label: "Draft full reply", icon: Wand2, run: runReplyDraft, busy: aiBusy === "reply",
