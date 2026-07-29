@@ -124,6 +124,52 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
                 </div>
               </div>
             ))}
+            <div className="space-y-2">
+              <div className="text-[11px] font-medium text-muted-foreground">Custom theme</div>
+              <button
+                onClick={() => settingsStore.set({ theme: "custom" })}
+                className={`press w-full rounded-xl border p-2.5 text-left hover:border-primary ${
+                  s.theme === "custom" ? "border-primary ring-2 ring-primary/40" : "border-border"
+                }`}
+              >
+                <div className="mb-2 flex gap-1">
+                  <div className="h-6 w-6 rounded-md border border-border/40" style={{ background: s.customBg }} />
+                  <div className="h-6 w-6 rounded-md border border-border/40" style={{ background: s.customFg }} />
+                  <div className="h-6 w-6 rounded-md border border-border/40" style={{ background: s.customPrimary }} />
+                </div>
+                <div className="text-xs font-medium">Use my theme</div>
+              </button>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  ["Background", "customBg"],
+                  ["Text", "customFg"],
+                  ["Accent", "customPrimary"],
+                ] as const).map(([label, key]) => (
+                  <div key={key} className="space-y-1">
+                    <Label className="text-[10px]">{label}</Label>
+                    <Input
+                      type="color"
+                      value={s[key]}
+                      onChange={(e) => settingsStore.set({ [key]: e.target.value, theme: "custom" } as any)}
+                      className="h-9 cursor-pointer p-1"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                {(["dark", "light"] as const).map((m) => (
+                  <Button
+                    key={m}
+                    size="sm"
+                    variant={s.customMode === m ? "default" : "ghost"}
+                    onClick={() => settingsStore.set({ customMode: m })}
+                    className="flex-1 capitalize"
+                  >
+                    {m}
+                  </Button>
+                ))}
+              </div>
+            </div>
           </section>
 
           <Separator />
