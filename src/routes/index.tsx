@@ -869,13 +869,12 @@ function App() {
             )}
             {searchOpen && (
             <Input
-              className="search-field"
               id="search-input"
               placeholder="Search, type 10/26/25, or ask — “find my oldest emails from Spotify”"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") void runSearch(); }}
-              className="h-8 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
+              className="search-field h-8 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
               aria-label="Search mail or ask the AI"
               onBlur={() => { if (!query) setSearchOpen(false); }}
             />
