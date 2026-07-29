@@ -30,7 +30,10 @@ import {
 } from "@/lib/gmail";
 import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
 import { useSession, useSettings, sessionStore, settingsStore, getAiLabels, setAiLabel, type AiLabel, type SortBy } from "@/lib/store";
-import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief, aiSecurityCheck, aiSenderBrief, aiCleanupPlan, aiNaturalSearch, looksNaturalLanguage, aiReplyDraft, aiVipScan, aiInboxReport } from "@/lib/ai";
+import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief, aiSecurityCheck, aiSenderBrief, aiCleanupPlan, aiNaturalSearch, looksNaturalLanguage, aiReplyDraft, aiVipScan, aiInboxReport,
+  aiCommitments, aiSpendScan, aiTravelBoard, aiDeadlineBoard, aiRelationshipPulse, aiSmartFolders,
+  aiRuleBuilder, aiDailyPlan, aiDuplicateScan, aiThreadTimeline, aiExplainSimply, aiToneVariants,
+  aiCounterProposal, aiPoliteDecline, aiCalendarDraft, aiExtractContacts } from "@/lib/ai";
 import type { AssistantAction } from "@/lib/ai";
 import { startScheduler, scheduleStore, useScheduled, type ScheduledMessage } from "@/lib/schedule";
 import { printMessageAsPdf, printImageAsPdf, printTextAsPdf } from "@/lib/printpdf";
@@ -663,6 +666,36 @@ function App() {
     finally { setAiBusy(null); }
   };
 
+  /* --- Extra AI runners (inbox-level) --- */
+  const runInboxTool = async (
+    id: string,
+    title: string,
+    fn: (items: { from: string; subject: string; snippet: string }[]) => Promise<string>,
+  ) => {
+    if (!messages.length) return;
+    setAiBusy(id);
+    try {
+      const text = await fn(messages.slice(0, 40).map((m) => ({ from: m.from, subject: m.subject, snippet: m.snippet })));
+      setScan({ title, text });
+    } catch (e: any) { toast.error(e.message || `${title} failed`); }
+    finally { setAiBusy(null); }
+  };
+
+  /* --- Extra AI runners (open message) --- */
+  const runReaderTool = async (
+    id: string,
+    title: string,
+    fn: (subject: string, from: string, body: string) => Promise<string>,
+  ) => {
+    if (!opened) return;
+    setAiBusy(id);
+    try {
+      const text = await fn(opened.subject, opened.from, opened.bodyText || opened.snippet);
+      setScan({ title, text });
+    } catch (e: any) { toast.error(e.message || `${title} failed`); }
+    finally { setAiBusy(null); }
+  };
+
   const pendingScheduled = scheduled.filter((s) => s.status === "pending").length;
 
 
@@ -685,6 +718,24 @@ function App() {
       info: "An analytics-style read on your loaded mail: volume, top senders, recurring themes and time sinks." },
     { id: "cleanup", label: "Cleanup Plan", icon: Sparkle, run: runCleanupPlan, busy: aiBusy === "cleanup", badge: 0,
       info: "Turns the messages in view into a concrete plan: what to archive now, what to reply to today, and what to unsubscribe from." },
+    { id: "commitments", label: "Commitment Tracker", icon: ListChecks, run: () => runInboxTool("commitments", "Commitment tracker", aiCommitments), busy: aiBusy === "commitments", badge: 0,
+      info: "Finds everything you promised someone across the mail in view, with who's waiting and by when." },
+    { id: "spend", label: "Spend Scan", icon: BarChart3, run: () => runInboxTool("spend", "Spend scan", aiSpendScan), busy: aiBusy === "spend", badge: 0,
+      info: "Pulls receipts, invoices, subscriptions and renewals out of your inbox so you can see what you're paying for." },
+    { id: "travel", label: "Travel Board", icon: CalendarClock, run: () => runInboxTool("travel", "Travel board", aiTravelBoard), busy: aiBusy === "travel", badge: 0,
+      info: "Builds a chronological itinerary from flight, hotel and booking confirmations, with confirmation codes." },
+    { id: "deadlines", label: "Deadline Board", icon: Clock, run: () => runInboxTool("deadlines", "Deadline board", aiDeadlineBoard), busy: aiBusy === "deadlines", badge: 0,
+      info: "Every date, due date and event mentioned anywhere in your loaded mail, sorted by when it lands." },
+    { id: "pulse", label: "Relationship Pulse", icon: Crown, run: () => runInboxTool("pulse", "Relationship pulse", aiRelationshipPulse), busy: aiBusy === "pulse", badge: 0,
+      info: "Shows which contacts are warm and which are going cold because you never replied." },
+    { id: "folders", label: "Smart Folders", icon: Plus, run: () => runInboxTool("folders", "Suggested folders", aiSmartFolders), busy: aiBusy === "folders", badge: 0,
+      info: "Suggests the 4-6 folders that would actually fit your mail, with what belongs in each." },
+    { id: "rules", label: "Rule Builder", icon: Filter, run: () => runInboxTool("rules", "Suggested rules", aiRuleBuilder), busy: aiBusy === "rules", badge: 0,
+      info: "Writes safe auto-rules — IF from:x THEN archive — that would quietly cut the noise for good." },
+    { id: "plan", label: "Daily Plan", icon: Gauge, run: () => runInboxTool("plan", "Daily plan", aiDailyPlan), busy: aiBusy === "plan", badge: 0,
+      info: "Turns the inbox into a time-blocked plan for today, highest-leverage work first." },
+    { id: "dupes", label: "Duplicate Scan", icon: Sparkle, run: () => runInboxTool("dupes", "Duplicate scan", aiDuplicateScan), busy: aiBusy === "dupes", badge: 0,
+      info: "Clusters resends and repeated notification chains and tells you which single copy to keep." },
     { id: "queue", label: "Scheduled", icon: Clock, run: () => setQueueOpen(true), busy: false, badge: pendingScheduled,
       info: "Ask the assistant to \"send X an email in 10 minutes\" — Gemini drafts it and it goes out on time. Cancel any time here." },
   ];
@@ -710,6 +761,20 @@ function App() {
       info: "Checks this email for phishing, spoofing and invoice-fraud signals, then tells you exactly what to do." },
     { id: "sender", label: "Sender brief", icon: UserSearch, run: runSenderBrief, busy: aiBusy === "sender",
       info: "Profiles this sender from every loaded email they sent you: what they usually want and which threads are still open." },
+    { id: "timeline", label: "Thread timeline", icon: Clock, run: () => runReaderTool("timeline", "Thread timeline", aiThreadTimeline), busy: aiBusy === "timeline",
+      info: "Reconstructs who said what in this thread and ends with exactly what is waiting on you." },
+    { id: "explain", label: "Explain simply", icon: Languages, run: () => runReaderTool("explain", "Explain simply", aiExplainSimply), busy: aiBusy === "explain",
+      info: "Rewrites dense, legal or jargon-heavy mail into plain English, with the terms defined." },
+    { id: "variants", label: "Reply in 3 tones", icon: MessageSquare, run: () => runReaderTool("variants", "Reply in 3 tones", aiToneVariants), busy: aiBusy === "variants",
+      info: "Drafts the same reply warm, direct and firm so you can pick the register that fits." },
+    { id: "counter", label: "Counter-proposal", icon: Gauge, run: () => runReaderTool("counter", "Counter-proposal", aiCounterProposal), busy: aiBusy === "counter",
+      info: "Reads the ask, weighs both sides' leverage, and writes a ready-to-send counter." },
+    { id: "decline", label: "Politely decline", icon: BellOff, run: () => runReaderTool("decline", "Politely decline", aiPoliteDecline), busy: aiBusy === "decline",
+      info: "A warm, short, unambiguous no that keeps the relationship intact." },
+    { id: "ics", label: "Calendar draft", icon: CalendarClock, run: () => runReaderTool("ics", "Calendar draft", aiCalendarDraft), busy: aiBusy === "ics",
+      info: "Turns any event in the email into a calendar-ready .ics block you can paste into your calendar." },
+    { id: "contacts", label: "Extract contacts", icon: UserSearch, run: () => runReaderTool("contacts", "Extracted contacts", aiExtractContacts), busy: aiBusy === "contacts",
+      info: "Lifts every person, company, address, phone number, link and reference number out of the message." },
     { id: "pdf", label: "Save as PDF", icon: FileText, run: () => opened && printMessageAsPdf({ subject: opened.subject, from: opened.from, to: opened.to, date: opened.date, bodyHtml: opened.bodyHtml, bodyText: opened.bodyText }), busy: false,
       info: "Exports this email — headers and body — as a clean PDF via your browser's print dialog." },
   ];
