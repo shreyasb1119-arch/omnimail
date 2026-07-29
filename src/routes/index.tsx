@@ -855,7 +855,7 @@ function App() {
         <div className="animate-drop flex w-full justify-center">
           <div
             onClick={() => { if (!searchOpen) { setSearchOpen(true); setTimeout(() => document.getElementById("search-input")?.focus(), 60); } }}
-            className={`glass-cmd flex items-center gap-2 rounded-full shadow-xl ring-1 ring-border/40 transition-all duration-300 ease-out focus-within:ring-2 focus-within:ring-primary/40 ${searchOpen ? "w-full max-w-2xl px-4 py-2" : "w-auto cursor-pointer px-3 py-1.5 hover:ring-primary/40"}`}
+            className={`glass-cmd search-shell flex items-center gap-2 rounded-full shadow-xl ring-1 ring-border/40 focus-within:ring-2 focus-within:ring-primary/40 ${searchOpen ? "w-full max-w-2xl scale-100 px-4 py-2" : "w-auto max-w-[220px] cursor-pointer px-3 py-1.5 hover:scale-[1.03] hover:ring-primary/40"}`}
           >
             {searching ? (
               <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
@@ -865,10 +865,11 @@ function App() {
               <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             )}
             {!searchOpen && (
-              <span className="whitespace-nowrap text-xs text-muted-foreground">Search or ask AI</span>
+              <span className="search-hint whitespace-nowrap text-xs text-muted-foreground">Search or ask AI</span>
             )}
             {searchOpen && (
             <Input
+              className="search-field"
               id="search-input"
               placeholder="Search, type 10/26/25, or ask — “find my oldest emails from Spotify”"
               value={query}
