@@ -33,7 +33,9 @@ import { useSession, useSettings, sessionStore, settingsStore, getAiLabels, setA
 import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief, aiSecurityCheck, aiSenderBrief, aiCleanupPlan, aiNaturalSearch, looksNaturalLanguage, aiReplyDraft, aiVipScan, aiInboxReport,
   aiCommitments, aiSpendScan, aiTravelBoard, aiDeadlineBoard, aiRelationshipPulse, aiSmartFolders,
   aiRuleBuilder, aiDailyPlan, aiDuplicateScan, aiThreadTimeline, aiExplainSimply, aiToneVariants,
-  aiCounterProposal, aiPoliteDecline, aiCalendarDraft, aiExtractContacts } from "@/lib/ai";
+  aiCounterProposal, aiPoliteDecline, aiCalendarDraft, aiExtractContacts,
+  aiWaitingOnThem, aiWeeklyRecap, aiInboxRiskScan, aiOpportunityFinder,
+  aiFactCheck, aiContractRisk, aiForwardBlurb, aiClarifyingQuestions } from "@/lib/ai";
 import type { AssistantAction } from "@/lib/ai";
 import { startScheduler, scheduleStore, useScheduled, type ScheduledMessage } from "@/lib/schedule";
 import { printMessageAsPdf, printImageAsPdf, printTextAsPdf } from "@/lib/printpdf";
@@ -161,6 +163,8 @@ function App() {
   const [oldestFirst, setOldestFirst] = useState(false);
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
   const [readerAiOpen, setReaderAiOpen] = useState(false);
+  const [openAiGroup, setOpenAiGroup] = useState<string | null>("Triage & cleanup");
+  const [openReaderGroup, setOpenReaderGroup] = useState<string | null>("Understand");
   const [summary, setSummary] = useState<string>("");
   const [smartReplies, setSmartReplies] = useState<string[]>([]);
   const [digest, setDigest] = useState<string>("");
@@ -738,7 +742,17 @@ function App() {
       info: "Clusters resends and repeated notification chains and tells you which single copy to keep." },
     { id: "queue", label: "Scheduled", icon: Clock, run: () => setQueueOpen(true), busy: false, badge: pendingScheduled,
       info: "Ask the assistant to \"send X an email in 10 minutes\" — Gemini drafts it and it goes out on time. Cancel any time here." },
+    { id: "waiting", label: "Waiting On Them", icon: Clock, run: () => runInboxTool("waiting", "Waiting on them", aiWaitingOnThem), busy: aiBusy === "waiting", badge: 0,
+      info: "The mirror of Follow-up Radar: threads where you already replied and someone else still owes you an answer." },
+    { id: "recap", label: "Weekly Recap", icon: Newspaper, run: () => runInboxTool("recap", "Weekly recap", aiWeeklyRecap), busy: aiBusy === "recap", badge: 0,
+      info: "A week-in-review of your mail: what moved, what stalled, and the three things to carry into next week." },
+    { id: "riskscan", label: "Inbox Risk Scan", icon: ShieldCheck, run: () => runInboxTool("riskscan", "Inbox risk scan", aiInboxRiskScan), busy: aiBusy === "riskscan", badge: 0,
+      info: "Sweeps every loaded message for phishing, spoofed senders and invoice fraud instead of checking one email at a time." },
+    { id: "opps", label: "Opportunity Finder", icon: Crown, run: () => runInboxTool("opps", "Opportunity finder", aiOpportunityFinder), busy: aiBusy === "opps", badge: 0,
+      info: "Digs out warm intros, deals, partnerships and invitations buried in the noise, with the one move to make on each." },
   ];
+
+
 
   const READER_TOOLS = [
     { id: "replydraft", label: "Draft full reply", icon: Wand2, run: runReplyDraft, busy: aiBusy === "reply",
@@ -777,7 +791,32 @@ function App() {
       info: "Lifts every person, company, address, phone number, link and reference number out of the message." },
     { id: "pdf", label: "Save as PDF", icon: FileText, run: () => opened && printMessageAsPdf({ subject: opened.subject, from: opened.from, to: opened.to, date: opened.date, bodyHtml: opened.bodyHtml, bodyText: opened.bodyText }), busy: false,
       info: "Exports this email — headers and body — as a clean PDF via your browser's print dialog." },
+    { id: "factcheck", label: "Fact check", icon: ShieldCheck, run: () => runReaderTool("factcheck", "Fact check", aiFactCheck), busy: aiBusy === "factcheck",
+      info: "Lists every claim, number, date and promise in the email and flags which ones to verify before you act." },
+    { id: "contract", label: "Terms risk review", icon: FileText, run: () => runReaderTool("contract", "Terms risk review", aiContractRisk), busy: aiBusy === "contract",
+      info: "Reads the email for liability, indemnity, auto-renewal and payment traps, and suggests safer wording." },
+    { id: "forward", label: "Forward note", icon: MessageSquare, run: () => runReaderTool("forward", "Forward note", aiForwardBlurb), busy: aiBusy === "forward",
+      info: "Writes the two-line context blurb plus the ask, so forwarding this to a colleague takes one paste." },
+    { id: "questions", label: "Questions to ask", icon: UserSearch, run: () => runReaderTool("questions", "Questions to ask", aiClarifyingQuestions), busy: aiBusy === "questions",
+      info: "The 3-5 clarifying questions worth sending back before you commit, ordered by how much they unblock you." },
   ];
+
+  // Sub-groups so the big AI menus stay scannable
+  const INBOX_GROUPS: { name: string; ids: string[] }[] = [
+    { name: "Triage & cleanup", ids: ["triage", "purge", "priority", "dupes", "scout", "cleanup"] },
+    { name: "Daily briefings", ids: ["digest", "plan", "recap", "report"] },
+    { name: "People & follow-ups", ids: ["radar", "waiting", "vip", "pulse", "commitments", "opps"] },
+    { name: "Money, dates & travel", ids: ["spend", "deadlines", "travel", "queue"] },
+    { name: "Organise & protect", ids: ["folders", "rules", "riskscan"] },
+  ];
+  const READER_GROUPS: { name: string; ids: string[] }[] = [
+    { name: "Understand", ids: ["summary", "explain", "tone", "timeline", "translate"] },
+    { name: "Reply", ids: ["replydraft", "replies", "variants", "counter", "decline", "forward", "questions"] },
+    { name: "Extract", ids: ["tasks", "meeting", "ics", "contacts", "files"] },
+    { name: "Verify & export", ids: ["security", "factcheck", "contract", "sender", "pdf"] },
+  ];
+
+
 
 
   const commands: Cmd[] = useMemo(() => [
@@ -816,7 +855,7 @@ function App() {
         <div className="animate-drop flex w-full justify-center">
           <div
             onClick={() => { if (!searchOpen) { setSearchOpen(true); setTimeout(() => document.getElementById("search-input")?.focus(), 60); } }}
-            className={`glass-cmd flex items-center gap-2 rounded-full shadow-xl ring-1 ring-border/40 transition-all duration-300 ease-out focus-within:ring-2 focus-within:ring-primary/40 ${searchOpen ? "w-full max-w-2xl px-4 py-2" : "w-auto cursor-pointer px-3 py-1.5 hover:ring-primary/40"}`}
+            className={`glass-cmd search-shell flex items-center gap-2 rounded-full shadow-xl ring-1 ring-border/40 focus-within:ring-2 focus-within:ring-primary/40 ${searchOpen ? "w-full max-w-2xl scale-100 px-4 py-2" : "w-auto max-w-[220px] cursor-pointer px-3 py-1.5 hover:scale-[1.03] hover:ring-primary/40"}`}
           >
             {searching ? (
               <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
@@ -826,7 +865,7 @@ function App() {
               <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             )}
             {!searchOpen && (
-              <span className="whitespace-nowrap text-xs text-muted-foreground">Search or ask AI</span>
+              <span className="search-hint whitespace-nowrap text-xs text-muted-foreground">Search or ask AI</span>
             )}
             {searchOpen && (
             <Input
@@ -835,7 +874,7 @@ function App() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") void runSearch(); }}
-              className="h-8 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
+              className="search-field h-8 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
               aria-label="Search mail or ask the AI"
               onBlur={() => { if (!query) setSearchOpen(false); }}
             />
@@ -931,24 +970,26 @@ function App() {
                   <Plus className="h-3 w-3" />
                 </button>
               </div>
-              {foldersOpen && (
-              <div className="no-scrollbar animate-drop max-h-40 space-y-0.5 overflow-y-auto">
-                {userLabels.length === 0 && (
-                  <div className="px-3 py-1 text-[11px] text-muted-foreground/70">No folders yet</div>
-                )}
-                {userLabels.map((l) => (
-                  <button
-                    key={l.id}
-                    onClick={() => { setFolder(l.id); setActiveQuery(""); setQuery(""); }}
-                    className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs transition ${
-                      folder === l.id && !activeQuery ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                    }`}
-                  >
-                    <Folder className="h-3.5 w-3.5" /> <span className="truncate">{l.name}</span>
-                  </button>
-                ))}
+              <div className="collapsible" data-open={foldersOpen}>
+                <div className="collapsible-inner">
+                  <div className="no-scrollbar max-h-40 space-y-0.5 overflow-y-auto">
+                    {userLabels.length === 0 && (
+                      <div className="px-3 py-1 text-[11px] text-muted-foreground/70">No folders yet</div>
+                    )}
+                    {userLabels.map((l) => (
+                      <button
+                        key={l.id}
+                        onClick={() => { setFolder(l.id); setActiveQuery(""); setQuery(""); }}
+                        className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs transition ${
+                          folder === l.id && !activeQuery ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                        }`}
+                      >
+                        <Folder className="h-3.5 w-3.5" /> <span className="truncate">{l.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-              )}
             </div>
 
             <div className="mt-4 rounded-xl border border-border/60 bg-card/40 p-2">
@@ -960,43 +1001,69 @@ function App() {
                 <ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform duration-300 ${aiMenuOpen ? "rotate-180" : ""}`} />
               </button>
 
-              {aiMenuOpen && (
-                <div className="animate-drop stagger mt-2 space-y-1.5">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="press w-full justify-start gap-2"
-                    onClick={() => setAssistantOpen(true)}
-                  >
-                    <MessageSquare className="h-3.5 w-3.5" /> Chat Assistant
-                  </Button>
+              <div className="collapsible" data-open={aiMenuOpen}>
+                <div className="collapsible-inner">
+                  <div className="mt-2 space-y-1.5">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="press w-full justify-start gap-2"
+                      onClick={() => setAssistantOpen(true)}
+                    >
+                      <MessageSquare className="h-3.5 w-3.5" /> Chat Assistant
+                    </Button>
 
-                  {AI_TOOLS.map((t) => (
-                    <div key={t.id} className="flex items-center gap-1">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="press flex-1 justify-start gap-2"
-                        onClick={t.run}
-                        disabled={t.busy}
-                      >
-                        {t.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <t.icon className="h-3.5 w-3.5" />}
-                        {t.label}
-                        {t.badge ? (
-                          <span className="ml-auto rounded-full bg-primary/20 px-1.5 text-[10px] text-primary">{t.badge}</span>
-                        ) : null}
-                      </Button>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="max-w-[220px] text-xs">{t.info}</TooltipContent>
-                      </Tooltip>
-                    </div>
-                  ))}
+                    {INBOX_GROUPS.map((g) => {
+                      const tools = AI_TOOLS.filter((t) => g.ids.includes(t.id));
+                      if (!tools.length) return null;
+                      const open = openAiGroup === g.name;
+                      return (
+                        <div key={g.name} className="rounded-lg border border-border/50 bg-background/30">
+                          <button
+                            onClick={() => setOpenAiGroup(open ? null : g.name)}
+                            className="press flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                          >
+                            {g.name}
+                            <span className="ml-auto text-[10px] font-normal normal-case text-muted-foreground/60">{tools.length}</span>
+                            <ChevronDown className={`h-3 w-3 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
+                          </button>
+                          <div className="collapsible" data-open={open}>
+                            <div className="collapsible-inner">
+                              <div className="space-y-1.5 p-1.5 pt-0">
+                                {tools.map((t) => (
+                                  <div key={t.id} className="flex items-center gap-1">
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      className="press flex-1 justify-start gap-2"
+                                      onClick={t.run}
+                                      disabled={t.busy}
+                                    >
+                                      {t.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <t.icon className="h-3.5 w-3.5" />}
+                                      {t.label}
+                                      {t.badge ? (
+                                        <span className="ml-auto rounded-full bg-primary/20 px-1.5 text-[10px] text-primary">{t.badge}</span>
+                                      ) : null}
+                                    </Button>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="right" className="max-w-[220px] text-xs">{t.info}</TooltipContent>
+                                    </Tooltip>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
+
 
             <div className="mt-auto pt-2 text-center text-[10px] text-muted-foreground/70">
               Press <span className="rounded border border-border px-1 font-mono">⌘K</span> for everything, including Settings
@@ -1148,23 +1215,49 @@ function App() {
                     <Sparkles className="h-3.5 w-3.5" /> AI tools for this email
                     <ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform duration-300 ${readerAiOpen ? "rotate-180" : ""}`} />
                   </button>
-                  {readerAiOpen && (
-                    <div className="animate-drop stagger mt-2 grid gap-1.5 sm:grid-cols-2">
-                      {READER_TOOLS.map((t) => (
-                        <div key={t.id} className="flex items-center gap-1">
-                          <Button size="sm" variant="secondary" className="press h-8 flex-1 justify-start gap-1.5 text-xs" onClick={t.run} disabled={t.busy}>
-                            {t.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <t.icon className="h-3.5 w-3.5" />} {t.label}
-                          </Button>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-[240px] text-xs">{t.info}</TooltipContent>
-                          </Tooltip>
-                        </div>
-                      ))}
+                  <div className="collapsible" data-open={readerAiOpen}>
+                    <div className="collapsible-inner">
+                      <div className="mt-2 space-y-1.5">
+                        {READER_GROUPS.map((g) => {
+                          const tools = READER_TOOLS.filter((t) => g.ids.includes(t.id));
+                          if (!tools.length) return null;
+                          const open = openReaderGroup === g.name;
+                          return (
+                            <div key={g.name} className="rounded-lg border border-border/50 bg-background/30">
+                              <button
+                                onClick={() => setOpenReaderGroup(open ? null : g.name)}
+                                className="press flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                              >
+                                {g.name}
+                                <span className="ml-auto text-[10px] font-normal normal-case text-muted-foreground/60">{tools.length}</span>
+                                <ChevronDown className={`h-3 w-3 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
+                              </button>
+                              <div className="collapsible" data-open={open}>
+                                <div className="collapsible-inner">
+                                  <div className="grid gap-1.5 p-1.5 pt-0 sm:grid-cols-2">
+                                    {tools.map((t) => (
+                                      <div key={t.id} className="flex items-center gap-1">
+                                        <Button size="sm" variant="secondary" className="press h-8 flex-1 justify-start gap-1.5 text-xs" onClick={t.run} disabled={t.busy}>
+                                          {t.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <t.icon className="h-3.5 w-3.5" />} {t.label}
+                                        </Button>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                                          </TooltipTrigger>
+                                          <TooltipContent className="max-w-[240px] text-xs">{t.info}</TooltipContent>
+                                        </Tooltip>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  )}
+                  </div>
+
                 </div>
 
 
