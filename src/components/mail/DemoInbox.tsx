@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Star, Archive, Trash2, Sparkles, ChevronDown, Paperclip, Download, FileText,
   Inbox, Search, Loader2, ListChecks, MessageSquare, Radar, BellOff, Newspaper,
-  Languages, Gauge, CalendarClock, Zap, Filter, Check, RotateCcw,
+  Languages, Gauge, CalendarClock, Zap, Filter, Check, RotateCcw, ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -74,7 +74,9 @@ type FeatureKey =
   | "triage" | "purge" | "digest" | "radar" | "scout" | "priority"
   | "summary" | "replies" | "tasks" | "tone" | "meeting" | "translate" | "files"
   | "commitments" | "spend" | "travel" | "deadlines" | "pulse" | "plan" | "rules" | "dupes"
-  | "timeline" | "explain" | "variants" | "counter" | "decline" | "ics" | "contacts";
+  | "timeline" | "explain" | "variants" | "counter" | "decline" | "ics" | "contacts"
+  | "waiting" | "recap" | "riskscan" | "opps"
+  | "factcheck" | "contract" | "forward" | "questions";
 
 const INBOX_FEATURES: { key: FeatureKey; label: string; icon: any; blurb: string }[] = [
   { key: "triage", label: "Smart Triage", icon: Filter, blurb: "Tags every message High / Low / Cold." },
@@ -91,6 +93,10 @@ const INBOX_FEATURES: { key: FeatureKey; label: string; icon: any; blurb: string
   { key: "plan", label: "Daily Plan", icon: ListChecks, blurb: "A time-blocked plan for clearing today." },
   { key: "rules", label: "Rule Builder", icon: Filter, blurb: "Safe auto-rules that kill the noise." },
   { key: "dupes", label: "Duplicate Scan", icon: Zap, blurb: "Resends and repeat chains, clustered." },
+  { key: "waiting", label: "Waiting On Them", icon: Radar, blurb: "Who still owes you a reply." },
+  { key: "recap", label: "Weekly Recap", icon: Newspaper, blurb: "What moved, what stalled, what's next." },
+  { key: "riskscan", label: "Inbox Risk Scan", icon: ShieldCheck, blurb: "Phishing and invoice fraud, inbox-wide." },
+  { key: "opps", label: "Opportunity Finder", icon: Gauge, blurb: "Intros and deals hiding in the noise." },
 ];
 
 const READER_FEATURES: { key: FeatureKey; label: string; icon: any; blurb: string }[] = [
@@ -108,6 +114,10 @@ const READER_FEATURES: { key: FeatureKey; label: string; icon: any; blurb: strin
   { key: "decline", label: "Politely decline", icon: BellOff, blurb: "A warm no that keeps the door open." },
   { key: "ics", label: "Calendar draft", icon: CalendarClock, blurb: "Paste-ready .ics for any event." },
   { key: "contacts", label: "Extract contacts", icon: ListChecks, blurb: "People, links and reference numbers." },
+  { key: "factcheck", label: "Fact check", icon: ShieldCheck, blurb: "Claims and numbers worth verifying." },
+  { key: "contract", label: "Terms risk review", icon: FileText, blurb: "Liability and renewal traps, flagged." },
+  { key: "forward", label: "Forward note", icon: MessageSquare, blurb: "Context + ask, ready to forward." },
+  { key: "questions", label: "Questions to ask", icon: Check, blurb: "What to clarify before you commit." },
 ];
 
 const RESULTS: Record<string, string> = {
@@ -227,6 +237,36 @@ Companies: Northwind
 Contacts: priya@northwind.co
 Links: Zoom invite (in calendar)
 Refs: Q3-review.pdf, pricing-sheet.xlsx`,
+  waiting: `Dana Whitfield — owes you the intro context you asked for — 2 days
+Ana Silva — owes you the scope of the collaboration — 1 day
+Nudge: "Dana — still keen, can you send who you'd introduce me to?"`,
+  recap: `WHAT HAPPENED
+• Q3 deck landed and the review moved to Friday 10:30 PT.
+• Contract redlines came back from Marcus.
+STALLED
+• Dana's intro request — no reply for 2 days.
+• Ana's Q4 proposal — untranslated, unanswered.
+NEXT WEEK
+1. Close the indemnity language. 2. Present Q3. 3. Reply to Ana with a date.`,
+  riskscan: `CloudScale Sales — medium — cold outbound with a tracked "billing" link — do not click, trash it
+Everything else in view is from known senders with matching domains.
+No invoice-fraud or spoofing signals found.`,
+  opps: `Dana Whitfield — VC intro to two portfolio founders — reply with 2 time slots today
+Ana Silva — Q4 studio collaboration — ask for scope and budget range
+Priya Raman — visibility with leadership on Friday — bring one metric they haven't seen`,
+  factcheck: `Review moved to Friday 10:30am PT — verify: yes — check the calendar invite
+Revenue slide needs sign-off by Thu 5pm — verify: yes — confirm against pricing-sheet.xlsx
+Deck is otherwise final — verify: no — Priya owns it`,
+  contract: `"indemnify for all losses" — unlimited liability — cap it at fees paid in 12 months
+"auto-renews annually" — silent renewal — add 30-day notice
+"net 60" — slow payment — push to net 30
+Nothing else in the message is binding.`,
+  forward: `Forwarding Priya's Q3 deck — the review moved to Friday 10:30 PT and the revenue slide still needs confirming.
+Can you sanity-check slide 4 against the pricing sheet before Thursday noon?`,
+  questions: `1. Is the pricing sheet final, or can the numbers still move?
+2. Which revenue figure is authoritative — the deck or the sheet?
+3. Who else presents on Friday?
+4. Do you need the slide confirmed, or rewritten?`,
 };
 
 const REPLIES = ["Confirmed — slide looks right.", "Give me until Thursday noon.", "Can we push the review to Monday?"];
