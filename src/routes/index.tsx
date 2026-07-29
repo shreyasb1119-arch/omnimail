@@ -789,7 +789,32 @@ function App() {
       info: "Lifts every person, company, address, phone number, link and reference number out of the message." },
     { id: "pdf", label: "Save as PDF", icon: FileText, run: () => opened && printMessageAsPdf({ subject: opened.subject, from: opened.from, to: opened.to, date: opened.date, bodyHtml: opened.bodyHtml, bodyText: opened.bodyText }), busy: false,
       info: "Exports this email — headers and body — as a clean PDF via your browser's print dialog." },
+    { id: "factcheck", label: "Fact check", icon: ShieldCheck, run: () => runReaderTool("factcheck", "Fact check", aiFactCheck), busy: aiBusy === "factcheck",
+      info: "Lists every claim, number, date and promise in the email and flags which ones to verify before you act." },
+    { id: "contract", label: "Terms risk review", icon: FileText, run: () => runReaderTool("contract", "Terms risk review", aiContractRisk), busy: aiBusy === "contract",
+      info: "Reads the email for liability, indemnity, auto-renewal and payment traps, and suggests safer wording." },
+    { id: "forward", label: "Forward note", icon: MessageSquare, run: () => runReaderTool("forward", "Forward note", aiForwardBlurb), busy: aiBusy === "forward",
+      info: "Writes the two-line context blurb plus the ask, so forwarding this to a colleague takes one paste." },
+    { id: "questions", label: "Questions to ask", icon: UserSearch, run: () => runReaderTool("questions", "Questions to ask", aiClarifyingQuestions), busy: aiBusy === "questions",
+      info: "The 3-5 clarifying questions worth sending back before you commit, ordered by how much they unblock you." },
   ];
+
+  // Sub-groups so the big AI menus stay scannable
+  const INBOX_GROUPS: { name: string; ids: string[] }[] = [
+    { name: "Triage & cleanup", ids: ["triage", "purge", "priority", "dupes", "scout", "cleanup"] },
+    { name: "Daily briefings", ids: ["digest", "plan", "recap", "report"] },
+    { name: "People & follow-ups", ids: ["radar", "waiting", "vip", "pulse", "commitments", "opps"] },
+    { name: "Money, dates & travel", ids: ["spend", "deadlines", "travel", "queue"] },
+    { name: "Organise & protect", ids: ["folders", "rules", "riskscan"] },
+  ];
+  const READER_GROUPS: { name: string; ids: string[] }[] = [
+    { name: "Understand", ids: ["summary", "explain", "tone", "timeline", "translate"] },
+    { name: "Reply", ids: ["replydraft", "replies", "variants", "counter", "decline", "forward", "questions"] },
+    { name: "Extract", ids: ["tasks", "meeting", "ics", "contacts", "files"] },
+    { name: "Verify & export", ids: ["security", "factcheck", "contract", "sender", "pdf"] },
+  ];
+
+
 
 
   const commands: Cmd[] = useMemo(() => [
