@@ -153,6 +153,7 @@ function App() {
   const [cursorIndex, setCursorIndex] = useState(0);
   const [aiBusy, setAiBusy] = useState<null | "summary" | "replies" | "digest" | "tasks" | "radar" | "scout" | "priority" | "translate" | "tone" | "meeting" | "files" | "security" | "sender" | "cleanup" | "reply" | "vip" | "report">(null);
   const [searching, setSearching] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [searchExplain, setSearchExplain] = useState("");
   const [oldestFirst, setOldestFirst] = useState(false);
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
@@ -465,7 +466,7 @@ function App() {
       if (e.key === "j") { e.preventDefault(); setCursorIndex((i) => Math.min(viewMessages.length - 1, i + 1)); }
       else if (e.key === "k") { e.preventDefault(); setCursorIndex((i) => Math.max(0, i - 1)); }
       else if (e.key === "c") { e.preventDefault(); setComposeInitial(undefined); setComposeOpen(true); }
-      else if (e.key === "/") { e.preventDefault(); document.getElementById("search-input")?.focus(); }
+      else if (e.key === "/") { e.preventDefault(); setSearchOpen(true); setTimeout(() => document.getElementById("search-input")?.focus(), 60); }
       else if (e.key === "Enter" && cur) { e.preventDefault(); openMessage(cur.id); }
       else if (e.key === "e" && cur) { e.preventDefault(); doArchive([cur.id]); }
       else if (e.key === "#" && cur) { e.preventDefault(); doTrash([cur.id]); }
@@ -746,9 +747,11 @@ function App() {
       <ThemeApplier />
       <Toaster position="top-right" richColors />
       <div className="relative flex h-screen w-screen flex-col gap-3 overflow-hidden p-3 text-foreground">
-        {/* Floating omni search — plain search or natural language, auto-detected */}
+        {/* Floating omni search — collapses to a tiny pill until focused */}
         <div className="animate-drop flex w-full justify-center">
-          <div className="glass-cmd flex w-full max-w-2xl items-center gap-2 rounded-full px-4 py-2 shadow-xl ring-1 ring-border/40 transition focus-within:ring-2 focus-within:ring-primary/40">
+          <div
+            onClick={() => { if (!searchOpen) { setSearchOpen(true); setTimeout(() => document.getElementById("search-input")?.focus(), 60); } }}
+            className={`glass-cmd flex items-center gap-2 rounded-full shadow-xl ring-1 ring-border/40 transition-all duration-300 ease-out focus-within:ring-2 focus-within:ring-primary/40 ${searchOpen ? "w-full max-w-2xl px-4 py-2" : "w-auto cursor-pointer px-3 py-1.5 hover:ring-primary/40"}`} gap-2 rounded-full px-4 py-2 shadow-xl ring-1 ring-border/40 transition focus-within:ring-2 focus-within:ring-primary/40">
             {searching ? (
               <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
             ) : looksNaturalLanguage(query) ? (
@@ -756,6 +759,10 @@ function App() {
             ) : (
               <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             )}
+            {!searchOpen && (
+              <span className="whitespace-nowrap text-xs text-muted-foreground">Search or ask AI</span>
+            )}
+            {searchOpen && (
             <Input
               id="search-input"
               placeholder="Search, type 10/26/25, or ask — “find my oldest emails from Spotify”"
@@ -764,7 +771,9 @@ function App() {
               onKeyDown={(e) => { if (e.key === "Enter") void runSearch(); }}
               className="h-8 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
               aria-label="Search mail or ask the AI"
+              onBlur={() => { if (!query) setSearchOpen(false); }}
             />
+            )}
             {query && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -790,8 +799,8 @@ function App() {
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
-            <div className="mx-1 h-5 w-px bg-border/60" />
-            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full" onClick={load} aria-label="Refresh messages">
+            {searchOpen && <div className="mx-1 h-5 w-px bg-border/60" />}
+            <Button size="icon" variant="ghost" className="h-7 w-7 rounded-full" onClick={(e) => { e.stopPropagation(); load(); }} aria-label="Refresh messages">
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </Button>
           </div>
