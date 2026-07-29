@@ -120,6 +120,21 @@ const READER_FEATURES: { key: FeatureKey; label: string; icon: any; blurb: strin
   { key: "questions", label: "Questions to ask", icon: Check, blurb: "What to clarify before you commit." },
 ];
 
+const INBOX_GROUPS: { name: string; keys: FeatureKey[] }[] = [
+  { name: "Triage & cleanup", keys: ["triage", "purge", "priority", "dupes", "scout"] },
+  { name: "Daily briefings", keys: ["digest", "plan", "recap"] },
+  { name: "People & follow-ups", keys: ["radar", "waiting", "pulse", "commitments", "opps"] },
+  { name: "Money, dates & travel", keys: ["spend", "deadlines", "travel"] },
+  { name: "Organise & protect", keys: ["rules", "riskscan"] },
+];
+
+const READER_GROUPS: { name: string; keys: FeatureKey[] }[] = [
+  { name: "Understand", keys: ["summary", "explain", "tone", "timeline", "translate"] },
+  { name: "Reply", keys: ["replies", "variants", "counter", "decline", "forward", "questions"] },
+  { name: "Extract", keys: ["tasks", "meeting", "ics", "contacts", "files"] },
+  { name: "Verify", keys: ["factcheck", "contract", "riskscan"] },
+];
+
 const RESULTS: Record<string, string> = {
   priority: `1. Priya Raman — Friday review — hard deadline Thursday 5pm
 2. Marcus Bell — contract redlines — blocking counter-signature
@@ -293,6 +308,8 @@ export function DemoInbox() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [readerMenu, setReaderMenu] = useState(false);
+  const [demoGroup, setDemoGroup] = useState<string | null>("Triage & cleanup");
+  const [demoReaderGroup, setDemoReaderGroup] = useState<string | null>("Understand");
   const [busy, setBusy] = useState<FeatureKey | null>(null);
   const [result, setResult] = useState<{ title: string; text: string } | null>(null);
   const [replies, setReplies] = useState<string[]>([]);
@@ -386,24 +403,49 @@ export function DemoInbox() {
               <Sparkles className="h-3.5 w-3.5" /> AI features
               <ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform duration-300 ${menuOpen ? "rotate-180" : ""}`} />
             </button>
-            {menuOpen && (
-              <div className="animate-drop stagger mt-2 space-y-1">
-                {INBOX_FEATURES.map((f) => (
-                  <button
-                    key={f.key}
-                    onClick={() => run(f.key, f.label)}
-                    className="press flex w-full items-start gap-2 rounded-lg border border-border/50 bg-card/50 px-2.5 py-2 text-left hover:border-primary/60"
-                  >
-                    <f.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                    <span>
-                      <span className="block text-[11px] font-medium">{f.label}</span>
-                      <span className="block text-[10px] leading-tight text-muted-foreground">{f.blurb}</span>
-                    </span>
-                    {busy === f.key && <Loader2 className="ml-auto h-3 w-3 animate-spin text-primary" />}
-                  </button>
-                ))}
+            <div className="collapsible" data-open={menuOpen}>
+              <div className="collapsible-inner">
+                <div className="mt-2 space-y-1">
+                  {INBOX_GROUPS.map((g) => {
+                    const feats = INBOX_FEATURES.filter((f) => g.keys.includes(f.key));
+                    if (!feats.length) return null;
+                    const open = demoGroup === g.name;
+                    return (
+                      <div key={g.name} className="rounded-lg border border-border/50 bg-card/30">
+                        <button
+                          onClick={() => setDemoGroup(open ? null : g.name)}
+                          className="press flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                        >
+                          {g.name}
+                          <span className="ml-auto text-[10px] font-normal normal-case text-muted-foreground/60">{feats.length}</span>
+                          <ChevronDown className={`h-3 w-3 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
+                        </button>
+                        <div className="collapsible" data-open={open}>
+                          <div className="collapsible-inner">
+                            <div className="space-y-1 p-1.5 pt-0">
+                              {feats.map((f) => (
+                                <button
+                                  key={f.key}
+                                  onClick={() => run(f.key, f.label)}
+                                  className="press flex w-full items-start gap-2 rounded-lg border border-border/50 bg-card/50 px-2.5 py-2 text-left hover:border-primary/60"
+                                >
+                                  <f.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                                  <span>
+                                    <span className="block text-[11px] font-medium">{f.label}</span>
+                                    <span className="block text-[10px] leading-tight text-muted-foreground">{f.blurb}</span>
+                                  </span>
+                                  {busy === f.key && <Loader2 className="ml-auto h-3 w-3 animate-spin text-primary" />}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            )}
+            </div>
           </div>
 
           <div className="flex items-center gap-2 px-3 py-1.5 text-[10px] text-muted-foreground">
@@ -474,23 +516,48 @@ export function DemoInbox() {
                 <Sparkles className="h-3.5 w-3.5" /> AI tools for this email
                 <ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform duration-300 ${readerMenu ? "rotate-180" : ""}`} />
               </button>
-              {readerMenu && (
-                <div className="animate-drop stagger mt-2 grid gap-1 sm:grid-cols-2">
-                  {READER_FEATURES.map((f) => (
-                    <button
-                      key={f.key}
-                      onClick={() => run(f.key, f.label)}
-                      className="press flex items-start gap-2 rounded-lg border border-border/50 bg-card/50 px-2.5 py-2 text-left hover:border-primary/60"
-                    >
-                      <f.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                      <span>
-                        <span className="block text-[11px] font-medium">{f.label}</span>
-                        <span className="block text-[10px] leading-tight text-muted-foreground">{f.blurb}</span>
-                      </span>
-                    </button>
-                  ))}
+              <div className="collapsible" data-open={readerMenu}>
+                <div className="collapsible-inner">
+                  <div className="mt-2 space-y-1">
+                    {READER_GROUPS.map((g) => {
+                      const feats = READER_FEATURES.filter((f) => g.keys.includes(f.key));
+                      if (!feats.length) return null;
+                      const open = demoReaderGroup === g.name;
+                      return (
+                        <div key={g.name} className="rounded-lg border border-border/50 bg-card/30">
+                          <button
+                            onClick={() => setDemoReaderGroup(open ? null : g.name)}
+                            className="press flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                          >
+                            {g.name}
+                            <span className="ml-auto text-[10px] font-normal normal-case text-muted-foreground/60">{feats.length}</span>
+                            <ChevronDown className={`h-3 w-3 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
+                          </button>
+                          <div className="collapsible" data-open={open}>
+                            <div className="collapsible-inner">
+                              <div className="grid gap-1 p-1.5 pt-0 sm:grid-cols-2">
+                                {feats.map((f) => (
+                                  <button
+                                    key={f.key}
+                                    onClick={() => run(f.key, f.label)}
+                                    className="press flex items-start gap-2 rounded-lg border border-border/50 bg-card/50 px-2.5 py-2 text-left hover:border-primary/60"
+                                  >
+                                    <f.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                                    <span>
+                                      <span className="block text-[11px] font-medium">{f.label}</span>
+                                      <span className="block text-[10px] leading-tight text-muted-foreground">{f.blurb}</span>
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
+              </div>
 
               {busy && (
                 <div className="mt-3 flex items-center gap-2 rounded-xl border border-border/50 bg-card/40 px-3 py-2 text-[11px] text-muted-foreground">
