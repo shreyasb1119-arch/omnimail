@@ -72,7 +72,9 @@ const SEED: DemoMsg[] = [
 
 type FeatureKey =
   | "triage" | "purge" | "digest" | "radar" | "scout" | "priority"
-  | "summary" | "replies" | "tasks" | "tone" | "meeting" | "translate" | "files";
+  | "summary" | "replies" | "tasks" | "tone" | "meeting" | "translate" | "files"
+  | "commitments" | "spend" | "travel" | "deadlines" | "pulse" | "plan" | "rules" | "dupes"
+  | "timeline" | "explain" | "variants" | "counter" | "decline" | "ics" | "contacts";
 
 const INBOX_FEATURES: { key: FeatureKey; label: string; icon: any; blurb: string }[] = [
   { key: "triage", label: "Smart Triage", icon: Filter, blurb: "Tags every message High / Low / Cold." },
@@ -81,6 +83,14 @@ const INBOX_FEATURES: { key: FeatureKey; label: string; icon: any; blurb: string
   { key: "digest", label: "Daily Digest", icon: Newspaper, blurb: "One-screen brief of the whole inbox." },
   { key: "radar", label: "Follow-up Radar", icon: Radar, blurb: "Threads still waiting on your reply." },
   { key: "scout", label: "Unsubscribe Scout", icon: BellOff, blurb: "Senders quietly eating your inbox." },
+  { key: "commitments", label: "Commitment Tracker", icon: Check, blurb: "Everything you promised, and to whom." },
+  { key: "spend", label: "Spend Scan", icon: Gauge, blurb: "Receipts, invoices and renewals in one view." },
+  { key: "travel", label: "Travel Board", icon: CalendarClock, blurb: "Bookings assembled into an itinerary." },
+  { key: "deadlines", label: "Deadline Board", icon: CalendarClock, blurb: "Every date across the inbox, in order." },
+  { key: "pulse", label: "Relationship Pulse", icon: Radar, blurb: "Who's warm, who's going cold on you." },
+  { key: "plan", label: "Daily Plan", icon: ListChecks, blurb: "A time-blocked plan for clearing today." },
+  { key: "rules", label: "Rule Builder", icon: Filter, blurb: "Safe auto-rules that kill the noise." },
+  { key: "dupes", label: "Duplicate Scan", icon: Zap, blurb: "Resends and repeat chains, clustered." },
 ];
 
 const READER_FEATURES: { key: FeatureKey; label: string; icon: any; blurb: string }[] = [
@@ -91,6 +101,13 @@ const READER_FEATURES: { key: FeatureKey; label: string; icon: any; blurb: strin
   { key: "meeting", label: "Meeting extract", icon: CalendarClock, blurb: "Calendar-ready event from the text." },
   { key: "translate", label: "Translate", icon: Languages, blurb: "Read any email in your language." },
   { key: "files", label: "Attachment brief", icon: Paperclip, blurb: "What the files are and which matters." },
+  { key: "timeline", label: "Thread timeline", icon: CalendarClock, blurb: "Who said what, and what's on you." },
+  { key: "explain", label: "Explain simply", icon: Languages, blurb: "Jargon and legalese in plain English." },
+  { key: "variants", label: "Reply in 3 tones", icon: MessageSquare, blurb: "Warm, direct or firm — you pick." },
+  { key: "counter", label: "Counter-proposal", icon: Gauge, blurb: "Leverage read + a ready counter." },
+  { key: "decline", label: "Politely decline", icon: BellOff, blurb: "A warm no that keeps the door open." },
+  { key: "ics", label: "Calendar draft", icon: CalendarClock, blurb: "Paste-ready .ics for any event." },
+  { key: "contacts", label: "Extract contacts", icon: ListChecks, blurb: "People, links and reference numbers." },
 ];
 
 const RESULTS: Record<string, string> = {
@@ -141,6 +158,75 @@ Ana`,
 The deck is what matters — it drives Friday's meeting.
 The pricing sheet backs the revenue slide you need to confirm.
 Action: open Q3-review.pdf and check slide 4 before Thursday.`,
+};
+
+const EXTRA_RESULTS: Record<string, string> = {
+  commitments: `Confirm the revenue slide — Priya Raman — Thu 5:00pm
+Answer indemnity language — Marcus Bell — before Wed
+Reply to intro request — Dana Whitfield — no date`,
+  spend: `Charges:
+• CloudScale trial — $0.00 — Tue
+Recurring:
+• Overflow Weekly (free), no paid subscriptions in view
+Watch out:
+No renewals due in the next 14 days.`,
+  travel: `No travel bookings in view.`,
+  deadlines: `Wed — Indemnity language back to Marcus — Marcus Bell
+Thu 5:00pm — Confirm revenue slide — Priya Raman
+Fri 10:30am PT — Q3 review call — review group`,
+  pulse: `Warm: Priya Raman, Marcus Bell
+Cooling: Dana Whitfield (2 days, no reply), Ana Silva
+Reconnect: send Dana a two-line yes/no today.`,
+  plan: `09:00-09:25 — Confirm revenue slide for Priya — 25m
+09:25-09:50 — Draft indemnity answer for Marcus — 25m
+09:50-10:00 — Reply to Dana with a time — 10m
+10:00-10:10 — Translate + answer Ana — 10m
+10:10-10:15 — Unsubscribe from CloudScale — 5m`,
+  rules: `IF from:cloudscale.biz THEN trash
+IF from:overflow.dev THEN label Reading, mark read
+IF subject:"Q3" THEN label Finance
+IF has:attachment from:northwind.co THEN label Deck`,
+  dupes: `Cold outbound — 1 — nothing to merge
+Newsletters — 1 — keep the latest issue
+No duplicate clusters worth cleaning.`,
+  timeline: `Priya — sent the Q3 deck and pricing sheet
+Priya — moved the review to Friday 10:30am PT
+Priya — asked for revenue slide confirmation by Thursday
+Now: you owe Priya a yes/no on the revenue slide.`,
+  explain: `In short: Priya needs you to verify one slide before Friday's meeting.
+What it means:
+• The deck is final except the revenue numbers.
+• Your sign-off unblocks the meeting.
+• The pricing sheet is the source data.
+Terms: "revenue slide" = the numbers page presented to leadership.`,
+  variants: `Warm:
+Thanks Priya — deck looks great. I'll verify the revenue slide against the pricing sheet and confirm by Thursday noon.
+
+Direct:
+Confirming by Thursday noon. Friday 10:30 PT works.
+
+Firm:
+I can confirm the slide by Thursday only if the pricing sheet is final. Flag now if it isn't.`,
+  counter: `Their ask: sign-off on the revenue slide by Thursday 5pm.
+Their leverage: the review is already scheduled for Friday.
+Your leverage: the numbers can't be presented without you.
+Counter: I can confirm by Thursday noon if you lock the pricing sheet today. If it changes after that, we present the slide as draft. Fine either way — just tell me which.`,
+  decline: `Thanks for thinking of me, Dana — I'm heads-down through this quarter, so I'll pass on a call for now. Happy to reconnect in the new year if that's still useful.`,
+  ics: `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Q3 Review
+DTSTART:20260731T173000Z
+DTEND:20260731T183000Z
+LOCATION:Zoom
+DESCRIPTION:Q3 review with Priya Raman. Confirm revenue slide first.
+END:VEVENT
+END:VCALENDAR`,
+  contacts: `People: Priya Raman
+Companies: Northwind
+Contacts: priya@northwind.co
+Links: Zoom invite (in calendar)
+Refs: Q3-review.pdf, pricing-sheet.xlsx`,
 };
 
 const REPLIES = ["Confirmed — slide looks right.", "Give me until Thursday noon.", "Can we push the review to Monday?"];
@@ -208,7 +294,7 @@ export function DemoInbox() {
         } else if (key === "replies") {
           setReplies(REPLIES);
         } else {
-          setResult({ title: label, text: RESULTS[key] || "" });
+          setResult({ title: label, text: RESULTS[key] || EXTRA_RESULTS[key] || "" });
         }
       }, 850),
     );
