@@ -656,3 +656,58 @@ export async function aiExtractContacts(subject: string, from: string, body: str
 Output grouped lines under People:, Companies:, Contacts:, Links:, Refs:. Skip empty groups. No preamble.`;
   return aiChat(mailOf(subject, from, body), system);
 }
+
+/* ------------------------------------------------------------------ */
+/* Additional inbox-level intelligence                                 */
+/* ------------------------------------------------------------------ */
+
+export async function aiWaitingOnThem(items: Item[]) {
+  const system = `List the threads where YOU already replied and the other person still owes you something.
+Output lines: "<person> — <what they owe> — <how long it's been>". End with one nudge you could send today. No preamble.`;
+  return aiChat(listOf(items), system);
+}
+
+export async function aiWeeklyRecap(items: Item[]) {
+  const system = `Write a weekly recap of this mail: what happened, what moved, what stalled, and the 3 things to carry into next week.
+Use headers WHAT HAPPENED / STALLED / NEXT WEEK. Short lines. No preamble.`;
+  return aiChat(listOf(items), system);
+}
+
+export async function aiInboxRiskScan(items: Item[]) {
+  const system = `Sweep these emails for phishing, spoofed senders, invoice fraud and suspicious links.
+Output lines: "<sender> — <risk: high/medium/low> — <why> — <what to do>". Only include anything not clearly safe. If all clean, say "Nothing suspicious in view.". No preamble.`;
+  return aiChat(listOf(items), system);
+}
+
+export async function aiOpportunityFinder(items: Item[]) {
+  const system = `Find the opportunities hiding in this mail: warm intros, potential deals, partnerships, invitations and referrals.
+Output lines: "<sender> — <opportunity> — <the one move to make>". If none, say "No clear opportunities in view.". No preamble.`;
+  return aiChat(listOf(items), system);
+}
+
+/* ------------------------------------------------------------------ */
+/* Additional reader-level intelligence                                */
+/* ------------------------------------------------------------------ */
+
+export async function aiFactCheck(subject: string, from: string, body: string) {
+  const system = `List every factual claim, number, date and promise in this email, and flag which ones you should verify before acting.
+Output lines: "<claim> — <verify: yes/no> — <how to check>". No preamble.`;
+  return aiChat(mailOf(subject, from, body), system);
+}
+
+export async function aiContractRisk(subject: string, from: string, body: string) {
+  const system = `Review this email (and any terms in it) for risky language: liability, indemnity, auto-renewal, exclusivity, deadlines, payment terms.
+Output lines: "<clause/phrase> — <risk> — <suggested edit>". If nothing risky, say "No risky terms found.". No preamble.`;
+  return aiChat(mailOf(subject, from, body), system);
+}
+
+export async function aiForwardBlurb(subject: string, from: string, body: string) {
+  const system = `Write a short forwarding note for this email: 2 sentences of context plus a clear ask for the person you're forwarding it to. Return only the note. No preamble.`;
+  return aiChat(mailOf(subject, from, body), system);
+}
+
+export async function aiClarifyingQuestions(subject: string, from: string, body: string) {
+  const system = `List the 3-5 clarifying questions worth sending back before you act on this email, ordered by how much they unblock you.
+Numbered lines, one question each. No preamble.`;
+  return aiChat(mailOf(subject, from, body), system);
+}
