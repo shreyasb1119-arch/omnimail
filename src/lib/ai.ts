@@ -495,3 +495,164 @@ Recommendation:
 No preamble.`;
   return aiChat(items.map((m, i) => `${i + 1}. from=${m.from} | ${m.subject} | ${m.snippet}`).join("\n"), system);
 }
+
+/* ------------------------------------------------------------------ */
+/* Extra inbox-level intelligence                                      */
+/* ------------------------------------------------------------------ */
+
+type Item = { from: string; subject: string; snippet: string };
+const listOf = (items: Item[]) =>
+  items.map((m, i) => `${i + 1}. from=${m.from} | ${m.subject} | ${m.snippet}`).join("\n");
+
+/** Promises you made and are still on the hook for. */
+export async function aiCommitments(items: Item[]) {
+  const system = `Find every commitment the USER appears to owe someone based on these emails.
+Output up to 8 lines: "<what you owe> — <to whom> — <due or 'no date'>".
+If nothing, output exactly "No outstanding commitments in view.". No preamble.`;
+  return aiChat(listOf(items), system);
+}
+
+/** Money view: receipts, invoices, subscriptions. */
+export async function aiSpendScan(items: Item[]) {
+  const system = `Extract every receipt, invoice, subscription, renewal or charge mentioned.
+Output exactly:
+Charges:
+<merchant — amount — date, up to 8 bullets>
+Recurring:
+<subscriptions you seem to pay for>
+Watch out:
+<one line: renewals or unusual amounts>
+If nothing financial, say "No billing mail in view.". No preamble.`;
+  return aiChat(listOf(items), system);
+}
+
+/** Travel board: flights, hotels, reservations. */
+export async function aiTravelBoard(items: Item[]) {
+  const system = `Build a travel itinerary from these emails: flights, hotels, trains, restaurant or event bookings.
+Output chronological lines: "<date> — <what> — <time/place> — <confirmation code if any>".
+If none, output exactly "No travel bookings in view.". No preamble.`;
+  return aiChat(listOf(items), system);
+}
+
+/** Every date and deadline across the inbox. */
+export async function aiDeadlineBoard(items: Item[]) {
+  const system = `Extract every deadline, due date and scheduled event mentioned across these emails.
+Output chronological lines: "<date/when> — <what> — <who's waiting>". Max 12 lines.
+If none, output exactly "No deadlines in view.". No preamble.`;
+  return aiChat(listOf(items), system);
+}
+
+/** Relationships going quiet. */
+export async function aiRelationshipPulse(items: Item[]) {
+  const system = `Judge the health of the user's email relationships from these messages.
+Output exactly:
+Warm: <people actively engaged, max 4>
+Cooling: <people who wrote and got no reply, max 4>
+Reconnect: <one line suggestion>
+No preamble.`;
+  return aiChat(listOf(items), system);
+}
+
+/** Suggested folders / labels for the mail in view. */
+export async function aiSmartFolders(items: Item[]) {
+  const system = `Propose 4-6 folders (labels) that would organise this inbox well.
+Output lines: "<Folder name> — <what goes in it> — <example sender or subject>". No preamble.`;
+  return aiChat(listOf(items), system);
+}
+
+/** Auto-rule builder: Gmail-style filters described in plain language. */
+export async function aiRuleBuilder(items: Item[]) {
+  const system = `Propose up to 6 automatic mail rules that would cut this inbox's noise.
+Output lines: "IF <condition using from:/subject:/has:> THEN <archive | label X | mark read | trash>".
+Only propose rules that are safe and obviously correct. No preamble.`;
+  return aiChat(listOf(items), system);
+}
+
+/** A time-blocked plan for clearing what's in view. */
+export async function aiDailyPlan(items: Item[]) {
+  const system = `Turn this inbox into a time-blocked plan for today.
+Output 4-6 lines: "<time block> — <task> — <est. minutes>". Start with the highest-leverage work. No preamble.`;
+  return aiChat(listOf(items), system);
+}
+
+/** Detect duplicate / near-duplicate threads and clutter clusters. */
+export async function aiDuplicateScan(items: Item[]) {
+  const system = `Group these emails into clusters of duplicates, resends, and repeated notification chains.
+Output lines: "<cluster name> — <count> — <keep which one>". If nothing repeats, say "No duplicate clusters in view.". No preamble.`;
+  return aiChat(listOf(items), system);
+}
+
+/* ------------------------------------------------------------------ */
+/* Extra reader-level intelligence                                     */
+/* ------------------------------------------------------------------ */
+
+const mailOf = (subject: string, from: string, body: string) =>
+  `From: ${from}\nSubject: ${subject}\n\n${body.slice(0, 6000)}`;
+
+/** Timeline of what happened in this thread. */
+export async function aiThreadTimeline(subject: string, from: string, body: string) {
+  const system = `Reconstruct this thread as a timeline. Output up to 8 lines: "<who> — <what they said/decided>".
+End with a final line "Now: <what is waiting on the user>". No preamble.`;
+  return aiChat(mailOf(subject, from, body), system);
+}
+
+/** Plain-English explainer for jargon-heavy or legal mail. */
+export async function aiExplainSimply(subject: string, from: string, body: string) {
+  const system = `Explain this email to a smart person with zero context, in plain English.
+Output exactly:
+In short: <one sentence>
+What it means: <up to 3 bullets, no jargon>
+Terms: <define any jargon or legal terms used, max 3>
+No preamble.`;
+  return aiChat(mailOf(subject, from, body), system);
+}
+
+/** Three replies in three registers. */
+export async function aiToneVariants(subject: string, from: string, body: string) {
+  const system = `Write three complete replies to this email, in three registers.
+Output exactly:
+Warm:
+<reply>
+
+Direct:
+<reply>
+
+Firm:
+<reply>
+Each 2-4 sentences. No preamble.`;
+  return aiChat(mailOf(subject, from, body), system);
+}
+
+/** Negotiation / counter-proposal helper. */
+export async function aiCounterProposal(subject: string, from: string, body: string) {
+  const system = `Treat this email as a proposal or ask. Help the user respond strategically.
+Output exactly:
+Their ask: <one line>
+Their leverage: <one line>
+Your leverage: <one line>
+Counter: <a ready-to-send 3-sentence counter-proposal>
+No preamble.`;
+  return aiChat(mailOf(subject, from, body), system);
+}
+
+/** A graceful decline. */
+export async function aiPoliteDecline(subject: string, from: string, body: string) {
+  const system = `Write a warm, short, unambiguous decline to this email. Keep the door open without promising anything.
+Return only the reply body. No preamble.`;
+  return aiChat(mailOf(subject, from, body), system);
+}
+
+/** Calendar-ready ICS text for any event in the email. */
+export async function aiCalendarDraft(subject: string, from: string, body: string) {
+  const system = `Find the event in this email and output a valid iCalendar VEVENT block only:
+BEGIN:VCALENDAR ... END:VCALENDAR with SUMMARY, DTSTART, DTEND, LOCATION and DESCRIPTION.
+Use UTC (Z) timestamps. If no event exists, output exactly "No event found in this email.". No preamble or code fences.`;
+  return aiChat(mailOf(subject, from, body), system);
+}
+
+/** Contacts and identifiers mentioned in the email. */
+export async function aiExtractContacts(subject: string, from: string, body: string) {
+  const system = `Extract every person, company, email address, phone number, link and reference number in this email.
+Output grouped lines under People:, Companies:, Contacts:, Links:, Refs:. Skip empty groups. No preamble.`;
+  return aiChat(mailOf(subject, from, body), system);
+}

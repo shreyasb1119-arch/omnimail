@@ -2,13 +2,17 @@ import { useSyncExternalStore } from "react";
 
 export type Theme =
   // dark
-  | "superhuman" | "oled" | "cyberpunk" | "forest" | "ocean"
+  | "mono" | "superhuman" | "oled" | "cyberpunk" | "forest" | "ocean"
   | "midnight" | "ember" | "aurora" | "grape" | "carbon" | "dusk"
-  | "slate" | "royal"
+  | "slate" | "royal" | "obsidian" | "moss" | "cocoa"
   // light
-  | "nordic" | "paper" | "linen" | "mint" | "blossom" | "sand" | "sky";
+  | "nordic" | "paper" | "linen" | "mint" | "blossom" | "sand" | "sky"
+  | "porcelain" | "peach" | "sage"
+  // user-defined
+  | "custom";
 
 export const THEMES: { id: Theme; label: string; mode: "dark" | "light"; swatch: string[] }[] = [
+  { id: "mono", label: "Mono Noir", mode: "dark", swatch: ["#0a0a0a", "#ffffff"] },
   { id: "superhuman", label: "Superhuman", mode: "dark", swatch: ["#1a1c26", "#e05a4a"] },
   { id: "oled", label: "OLED Midnight", mode: "dark", swatch: ["#000000", "#e2b83f"] },
   { id: "cyberpunk", label: "Cyberpunk", mode: "dark", swatch: ["#2a1543", "#f13ab4"] },
@@ -29,6 +33,12 @@ export const THEMES: { id: Theme; label: string; mode: "dark" | "light"; swatch:
   { id: "blossom", label: "Blossom", mode: "light", swatch: ["#fdf5f8", "#d4638d"] },
   { id: "sand", label: "Soft Sand", mode: "light", swatch: ["#faf5ea", "#c07b3c"] },
   { id: "sky", label: "Clear Sky", mode: "light", swatch: ["#f4f8fd", "#3b82c4"] },
+  { id: "obsidian", label: "Obsidian", mode: "dark", swatch: ["#0b1020", "#7aa2ff"] },
+  { id: "moss", label: "Deep Moss", mode: "dark", swatch: ["#141a12", "#9bd67a"] },
+  { id: "cocoa", label: "Cocoa", mode: "dark", swatch: ["#1a1310", "#e0a06a"] },
+  { id: "porcelain", label: "Porcelain", mode: "light", swatch: ["#ffffff", "#111111"] },
+  { id: "peach", label: "Peach Cream", mode: "light", swatch: ["#fff6f0", "#e07a4a"] },
+  { id: "sage", label: "Sage Light", mode: "light", swatch: ["#f4f7f2", "#5c8a5c"] },
 ];
 
 /** Ten built-in wallpapers. Users can still paste a URL or upload their own. */
@@ -46,9 +56,10 @@ export const WALLPAPERS: { id: string; label: string; url: string }[] = [
 ];
 
 
-export const DEFAULT_DARK: Theme = "superhuman";
+export const DEFAULT_DARK: Theme = "mono";
 export const DEFAULT_LIGHT: Theme = "nordic";
 export function themeMode(t: Theme): "dark" | "light" {
+  if (t === "custom") return settingsStore?.get().customMode ?? "dark";
   return THEMES.find((x) => x.id === t)?.mode ?? "dark";
 }
 
@@ -56,6 +67,10 @@ export interface Settings {
   clientId: string;
   geminiKey: string;
   theme: Theme;
+  customBg: string;
+  customFg: string;
+  customPrimary: string;
+  customMode: "dark" | "light";
   avatarUrl: string;
   translateTo: string;
   wallpaperUrl: string;
@@ -85,7 +100,11 @@ const SESSION_KEY = "shreyas-mail:session";
 const defaultSettings: Settings = {
   clientId: "",
   geminiKey: "",
-  theme: "superhuman",
+  theme: "mono",
+  customBg: "#0b0b0c",
+  customFg: "#f5f5f5",
+  customPrimary: "#7c5cff",
+  customMode: "dark",
   avatarUrl: "",
   translateTo: "English",
   wallpaperUrl: "",

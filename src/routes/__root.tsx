@@ -90,7 +90,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "icon", href: "/icon.svg", type: "image/svg+xml" },
     ],
     scripts: [
       { src: "https://accounts.google.com/gsi/client", async: true, defer: true },
