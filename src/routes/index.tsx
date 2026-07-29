@@ -970,24 +970,26 @@ function App() {
                   <Plus className="h-3 w-3" />
                 </button>
               </div>
-              {foldersOpen && (
-              <div className="no-scrollbar animate-drop max-h-40 space-y-0.5 overflow-y-auto">
-                {userLabels.length === 0 && (
-                  <div className="px-3 py-1 text-[11px] text-muted-foreground/70">No folders yet</div>
-                )}
-                {userLabels.map((l) => (
-                  <button
-                    key={l.id}
-                    onClick={() => { setFolder(l.id); setActiveQuery(""); setQuery(""); }}
-                    className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs transition ${
-                      folder === l.id && !activeQuery ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                    }`}
-                  >
-                    <Folder className="h-3.5 w-3.5" /> <span className="truncate">{l.name}</span>
-                  </button>
-                ))}
+              <div className="collapsible" data-open={foldersOpen}>
+                <div className="collapsible-inner">
+                  <div className="no-scrollbar max-h-40 space-y-0.5 overflow-y-auto">
+                    {userLabels.length === 0 && (
+                      <div className="px-3 py-1 text-[11px] text-muted-foreground/70">No folders yet</div>
+                    )}
+                    {userLabels.map((l) => (
+                      <button
+                        key={l.id}
+                        onClick={() => { setFolder(l.id); setActiveQuery(""); setQuery(""); }}
+                        className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs transition ${
+                          folder === l.id && !activeQuery ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                        }`}
+                      >
+                        <Folder className="h-3.5 w-3.5" /> <span className="truncate">{l.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-              )}
             </div>
 
             <div className="mt-4 rounded-xl border border-border/60 bg-card/40 p-2">
@@ -999,43 +1001,69 @@ function App() {
                 <ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform duration-300 ${aiMenuOpen ? "rotate-180" : ""}`} />
               </button>
 
-              {aiMenuOpen && (
-                <div className="animate-drop stagger mt-2 space-y-1.5">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="press w-full justify-start gap-2"
-                    onClick={() => setAssistantOpen(true)}
-                  >
-                    <MessageSquare className="h-3.5 w-3.5" /> Chat Assistant
-                  </Button>
+              <div className="collapsible" data-open={aiMenuOpen}>
+                <div className="collapsible-inner">
+                  <div className="mt-2 space-y-1.5">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="press w-full justify-start gap-2"
+                      onClick={() => setAssistantOpen(true)}
+                    >
+                      <MessageSquare className="h-3.5 w-3.5" /> Chat Assistant
+                    </Button>
 
-                  {AI_TOOLS.map((t) => (
-                    <div key={t.id} className="flex items-center gap-1">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="press flex-1 justify-start gap-2"
-                        onClick={t.run}
-                        disabled={t.busy}
-                      >
-                        {t.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <t.icon className="h-3.5 w-3.5" />}
-                        {t.label}
-                        {t.badge ? (
-                          <span className="ml-auto rounded-full bg-primary/20 px-1.5 text-[10px] text-primary">{t.badge}</span>
-                        ) : null}
-                      </Button>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="max-w-[220px] text-xs">{t.info}</TooltipContent>
-                      </Tooltip>
-                    </div>
-                  ))}
+                    {INBOX_GROUPS.map((g) => {
+                      const tools = AI_TOOLS.filter((t) => g.ids.includes(t.id));
+                      if (!tools.length) return null;
+                      const open = openAiGroup === g.name;
+                      return (
+                        <div key={g.name} className="rounded-lg border border-border/50 bg-background/30">
+                          <button
+                            onClick={() => setOpenAiGroup(open ? null : g.name)}
+                            className="press flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                          >
+                            {g.name}
+                            <span className="ml-auto text-[10px] font-normal normal-case text-muted-foreground/60">{tools.length}</span>
+                            <ChevronDown className={`h-3 w-3 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
+                          </button>
+                          <div className="collapsible" data-open={open}>
+                            <div className="collapsible-inner">
+                              <div className="space-y-1.5 p-1.5 pt-0">
+                                {tools.map((t) => (
+                                  <div key={t.id} className="flex items-center gap-1">
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      className="press flex-1 justify-start gap-2"
+                                      onClick={t.run}
+                                      disabled={t.busy}
+                                    >
+                                      {t.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <t.icon className="h-3.5 w-3.5" />}
+                                      {t.label}
+                                      {t.badge ? (
+                                        <span className="ml-auto rounded-full bg-primary/20 px-1.5 text-[10px] text-primary">{t.badge}</span>
+                                      ) : null}
+                                    </Button>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button className="rounded p-1 text-muted-foreground hover:text-foreground"><Info className="h-3 w-3" /></button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="right" className="max-w-[220px] text-xs">{t.info}</TooltipContent>
+                                    </Tooltip>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
+
 
             <div className="mt-auto pt-2 text-center text-[10px] text-muted-foreground/70">
               Press <span className="rounded border border-border px-1 font-mono">⌘K</span> for everything, including Settings
