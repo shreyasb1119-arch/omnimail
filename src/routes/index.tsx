@@ -163,6 +163,8 @@ function App() {
   const [oldestFirst, setOldestFirst] = useState(false);
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
   const [readerAiOpen, setReaderAiOpen] = useState(false);
+  const [openAiGroup, setOpenAiGroup] = useState<string | null>("Triage & cleanup");
+  const [openReaderGroup, setOpenReaderGroup] = useState<string | null>("Understand");
   const [summary, setSummary] = useState<string>("");
   const [smartReplies, setSmartReplies] = useState<string[]>([]);
   const [digest, setDigest] = useState<string>("");
