@@ -35,6 +35,14 @@ const AI_FEATURES = [
   { icon: UserSearch, title: "Sender Brief", body: "Profiles whoever just emailed you from every message they've sent: what they usually want, and which threads are still open." },
   { icon: Sparkle, title: "Cleanup Plan", body: "Turns the inbox in front of you into a plan — archive now, reply today, unsubscribe — instead of a wall of unread mail." },
   { icon: Paperclip, title: "Attachment Brief", body: "Explains what the attached files are, which one actually matters, and the single action to take." },
+  { icon: Clock, title: "Waiting On Them", body: "The mirror of Follow-up Radar: every thread where you already replied and someone else still owes you an answer." },
+  { icon: Newspaper, title: "Weekly Recap", body: "A week-in-review of your mail — what moved, what stalled, and the three things to carry into next week." },
+  { icon: ShieldCheck, title: "Inbox Risk Scan", body: "Sweeps every loaded message for phishing, spoofed senders and invoice fraud instead of checking one email at a time." },
+  { icon: Crown, title: "Opportunity Finder", body: "Digs warm intros, deals, partnerships and invitations out of the noise, each with the one move to make." },
+  { icon: ShieldAlert, title: "Fact Check", body: "Lists every claim, number, date and promise in an email and flags which ones to verify before you act." },
+  { icon: FileText, title: "Terms Risk Review", body: "Reads for liability, indemnity, auto-renewal and payment traps, then suggests safer wording." },
+  { icon: MessageSquare, title: "Forward Note", body: "Writes the two-line context plus the ask, so handing a thread to a colleague takes one paste." },
+  { icon: UserSearch, title: "Questions To Ask", body: "The clarifying questions worth sending back before you commit, ordered by how much they unblock you." },
 ];
 
 const CORE_FEATURES = [
@@ -53,6 +61,8 @@ const CORE_FEATURES = [
   { icon: Download, title: "Files you can actually find", body: "Attachments get their own card grid with one-tap download, or save any file or email straight to PDF." },
   { icon: Sun, title: "Ten built-in wallpapers", body: "Pick a ready-made backdrop, or bring your own image and tune its blur and visibility." },
   { icon: Sparkles, title: "AI menu, not AI clutter", body: "Every AI tool lives behind one button that drops down when you want it and disappears when you don't." },
+  { icon: Command, title: "Grouped AI sub-menus", body: "Thirty tools sorted into Triage, Briefings, People, Money and Protect — so you find the right one in a second." },
+  { icon: Search, title: "Search that gets out of the way", body: "A tiny pill until you touch it, then it glides open into a full omni bar and glides shut when you're done." },
 ];
 
 const VS_OTHERS = [
@@ -253,7 +263,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       {/* AI features */}
       <section className="reveal mx-auto max-w-6xl px-6 pb-16">
         <div className="mb-6 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight">Twenty AI features, not one chat box</h2>
+          <h2 className="text-3xl font-semibold tracking-tight">Thirty AI features, grouped so you can find them</h2>
           <p className="mt-2 text-sm text-muted-foreground">Every one of them works on your live mail.</p>
         </div>
         <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
