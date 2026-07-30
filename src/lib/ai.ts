@@ -711,3 +711,56 @@ export async function aiClarifyingQuestions(subject: string, from: string, body:
 Numbered lines, one question each. No preamble.`;
   return aiChat(mailOf(subject, from, body), system);
 }
+
+/* ------------------------------------------------------------------ */
+/* Newest inbox + reader intelligence                                  */
+/* ------------------------------------------------------------------ */
+
+/** One readable brief across every newsletter in view. */
+export async function aiNewsletterDigest(items: Item[]) {
+  const system = `From these emails, take only the newsletters, digests and automated updates and merge them into one short read.
+Output 4-7 bullets of "<topic> — <what's new> — <source>", then a final line "Skip: <senders not worth reading>". No preamble.`;
+  return aiChat(listOf(items), system);
+}
+
+/** Suggests a category for each message so bulk filing is one pass. */
+export async function aiBulkCategorize(items: Item[]) {
+  const system = `Assign each email exactly one category from: Work, Money, Travel, Personal, Newsletter, Promo, Notification, Spam.
+Output lines: "<sender> — <subject, trimmed> — <category>". No preamble.`;
+  return aiChat(listOf(items), system);
+}
+
+/** Who you are slow to answer, and what it's costing. */
+export async function aiResponseCoach(items: Item[]) {
+  const system = `Judge this mail as a responsiveness coach. Identify who is waiting longest, which threads are going stale, and where slow replies are costing the user.
+Output lines: "<person/thread> — <how stale> — <risk> — <reply today? yes/no>". End with "Today: <the 3 to answer first>". No preamble.`;
+  return aiChat(listOf(items), system);
+}
+
+/** An index of files that arrived in the mail in view. */
+export async function aiAttachmentIndex(items: Item[]) {
+  const system = `Find every email that appears to carry a document, invoice, contract, image or file (based on subject and snippet).
+Output lines: "<sender> — <likely file/document> — <why it matters> — <keep or discard>". If none, say "No documents in view.". No preamble.`;
+  return aiChat(listOf(items), system);
+}
+
+/** A do-this-next checklist for one email. */
+export async function aiChecklist(subject: string, from: string, body: string) {
+  const system = `Turn this email into a do-next checklist.
+Output numbered steps, each "<action> — <owner> — <when>". Max 6 steps, concrete verbs only. No preamble.`;
+  return aiChat(mailOf(subject, from, body), system);
+}
+
+/** Pre-empt pushback before you send a reply. */
+export async function aiObjections(subject: string, from: string, body: string) {
+  const system = `You are prepping the user's reply to this email. List the objections or pushback the sender is most likely to raise, and how to defuse each.
+Output lines: "<likely objection> — <your answer>". Max 5. No preamble.`;
+  return aiChat(mailOf(subject, from, body), system);
+}
+
+/** Reply written in the sender's own language. */
+export async function aiReplyInLanguage(subject: string, from: string, body: string) {
+  const system = `Detect the language this email is written in and write a complete, natural reply in that same language.
+Start with a line "Language: <name>", then a blank line, then only the reply body. No preamble.`;
+  return aiChat(mailOf(subject, from, body), system);
+}
