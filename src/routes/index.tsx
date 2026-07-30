@@ -159,6 +159,7 @@ function App() {
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [islandHover, setIslandHover] = useState(false);
   const [searchExplain, setSearchExplain] = useState("");
   const [oldestFirst, setOldestFirst] = useState(false);
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
