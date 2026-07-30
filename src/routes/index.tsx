@@ -913,6 +913,7 @@ function App() {
 
         <div className="flex min-h-0 w-full flex-1 gap-3 overflow-hidden">
 
+
           {/* Sidebar */}
           <aside className="glass no-scrollbar flex w-64 shrink-0 flex-col overflow-y-auto rounded-2xl px-3 py-4 shadow-xl">
             <div className="mb-5 flex items-center gap-2.5 px-1">
