@@ -35,7 +35,9 @@ import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtra
   aiRuleBuilder, aiDailyPlan, aiDuplicateScan, aiThreadTimeline, aiExplainSimply, aiToneVariants,
   aiCounterProposal, aiPoliteDecline, aiCalendarDraft, aiExtractContacts,
   aiWaitingOnThem, aiWeeklyRecap, aiInboxRiskScan, aiOpportunityFinder,
-  aiFactCheck, aiContractRisk, aiForwardBlurb, aiClarifyingQuestions } from "@/lib/ai";
+  aiFactCheck, aiContractRisk, aiForwardBlurb, aiClarifyingQuestions,
+  aiNewsletterDigest, aiBulkCategorize, aiResponseCoach, aiAttachmentIndex,
+  aiChecklist, aiObjections, aiReplyInLanguage } from "@/lib/ai";
 import type { AssistantAction } from "@/lib/ai";
 import { startScheduler, scheduleStore, useScheduled, type ScheduledMessage } from "@/lib/schedule";
 import { printMessageAsPdf, printImageAsPdf, printTextAsPdf } from "@/lib/printpdf";
@@ -801,20 +803,26 @@ function App() {
       info: "Writes the two-line context blurb plus the ask, so forwarding this to a colleague takes one paste." },
     { id: "questions", label: "Questions to ask", icon: UserSearch, run: () => runReaderTool("questions", "Questions to ask", aiClarifyingQuestions), busy: aiBusy === "questions",
       info: "The 3-5 clarifying questions worth sending back before you commit, ordered by how much they unblock you." },
+    { id: "checklist", label: "Action checklist", icon: ListChecks, run: () => runReaderTool("checklist", "Action checklist", aiChecklist), busy: aiBusy === "checklist",
+      info: "Turns the email into up to six concrete steps, each with an owner and a due moment." },
+    { id: "objections", label: "Anticipate objections", icon: ShieldAlert, run: () => runReaderTool("objections", "Anticipate objections", aiObjections), busy: aiBusy === "objections",
+      info: "Predicts the pushback the sender will raise to your reply and gives you the answer to each." },
+    { id: "replylang", label: "Reply in their language", icon: Languages, run: () => runReaderTool("replylang", "Reply in their language", aiReplyInLanguage), busy: aiBusy === "replylang",
+      info: "Detects the language the email was written in and drafts a natural reply in that same language." },
   ];
 
   // Sub-groups so the big AI menus stay scannable
   const INBOX_GROUPS: { name: string; ids: string[] }[] = [
     { name: "Triage & cleanup", ids: ["triage", "purge", "priority", "dupes", "scout", "cleanup"] },
-    { name: "Daily briefings", ids: ["digest", "plan", "recap", "report"] },
-    { name: "People & follow-ups", ids: ["radar", "waiting", "vip", "pulse", "commitments", "opps"] },
+    { name: "Daily briefings", ids: ["digest", "plan", "recap", "report", "newsdigest"] },
+    { name: "People & follow-ups", ids: ["radar", "waiting", "vip", "pulse", "commitments", "opps", "responsecoach"] },
     { name: "Money, dates & travel", ids: ["spend", "deadlines", "travel", "queue"] },
-    { name: "Organise & protect", ids: ["folders", "rules", "riskscan"] },
+    { name: "Organise & protect", ids: ["folders", "rules", "riskscan", "categorize", "fileindex"] },
   ];
   const READER_GROUPS: { name: string; ids: string[] }[] = [
     { name: "Understand", ids: ["summary", "explain", "tone", "timeline", "translate"] },
-    { name: "Reply", ids: ["replydraft", "replies", "variants", "counter", "decline", "forward", "questions"] },
-    { name: "Extract", ids: ["tasks", "meeting", "ics", "contacts", "files"] },
+    { name: "Reply", ids: ["replydraft", "replies", "variants", "counter", "decline", "forward", "questions", "objections", "replylang"] },
+    { name: "Extract", ids: ["tasks", "meeting", "ics", "contacts", "files", "checklist"] },
     { name: "Verify & export", ids: ["security", "factcheck", "contract", "sender", "pdf"] },
   ];
 
