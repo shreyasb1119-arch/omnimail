@@ -161,6 +161,7 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [islandHover, setIslandHover] = useState(false);
   const [searchExplain, setSearchExplain] = useState("");
+  const islandShown = islandHover || searchOpen;
   const [oldestFirst, setOldestFirst] = useState(false);
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
   const [readerAiOpen, setReaderAiOpen] = useState(false);
