@@ -76,7 +76,9 @@ type FeatureKey =
   | "commitments" | "spend" | "travel" | "deadlines" | "pulse" | "plan" | "rules" | "dupes"
   | "timeline" | "explain" | "variants" | "counter" | "decline" | "ics" | "contacts"
   | "waiting" | "recap" | "riskscan" | "opps"
-  | "factcheck" | "contract" | "forward" | "questions";
+  | "factcheck" | "contract" | "forward" | "questions"
+  | "newsdigest" | "categorize" | "responsecoach" | "fileindex"
+  | "checklist" | "objections" | "replylang";
 
 const INBOX_FEATURES: { key: FeatureKey; label: string; icon: any; blurb: string }[] = [
   { key: "triage", label: "Smart Triage", icon: Filter, blurb: "Tags every message High / Low / Cold." },
@@ -97,6 +99,10 @@ const INBOX_FEATURES: { key: FeatureKey; label: string; icon: any; blurb: string
   { key: "recap", label: "Weekly Recap", icon: Newspaper, blurb: "What moved, what stalled, what's next." },
   { key: "riskscan", label: "Inbox Risk Scan", icon: ShieldCheck, blurb: "Phishing and invoice fraud, inbox-wide." },
   { key: "opps", label: "Opportunity Finder", icon: Gauge, blurb: "Intros and deals hiding in the noise." },
+  { key: "newsdigest", label: "Newsletter Digest", icon: Newspaper, blurb: "Every newsletter as one short read." },
+  { key: "categorize", label: "Bulk Categorize", icon: Filter, blurb: "One category per email, in one pass." },
+  { key: "responsecoach", label: "Response Coach", icon: Gauge, blurb: "Who waited longest, and what it costs." },
+  { key: "fileindex", label: "Attachment Index", icon: Paperclip, blurb: "Every document that landed, indexed." },
 ];
 
 const READER_FEATURES: { key: FeatureKey; label: string; icon: any; blurb: string }[] = [
@@ -118,20 +124,23 @@ const READER_FEATURES: { key: FeatureKey; label: string; icon: any; blurb: strin
   { key: "contract", label: "Terms risk review", icon: FileText, blurb: "Liability and renewal traps, flagged." },
   { key: "forward", label: "Forward note", icon: MessageSquare, blurb: "Context + ask, ready to forward." },
   { key: "questions", label: "Questions to ask", icon: Check, blurb: "What to clarify before you commit." },
+  { key: "checklist", label: "Action checklist", icon: Check, blurb: "Six steps, each with owner and timing." },
+  { key: "objections", label: "Anticipate objections", icon: ShieldCheck, blurb: "The pushback, and your answer to it." },
+  { key: "replylang", label: "Reply in their language", icon: Languages, blurb: "Same language, natural phrasing." },
 ];
 
 const INBOX_GROUPS: { name: string; keys: FeatureKey[] }[] = [
   { name: "Triage & cleanup", keys: ["triage", "purge", "priority", "dupes", "scout"] },
-  { name: "Daily briefings", keys: ["digest", "plan", "recap"] },
-  { name: "People & follow-ups", keys: ["radar", "waiting", "pulse", "commitments", "opps"] },
+  { name: "Daily briefings", keys: ["digest", "plan", "recap", "newsdigest"] },
+  { name: "People & follow-ups", keys: ["radar", "waiting", "pulse", "commitments", "opps", "responsecoach"] },
   { name: "Money, dates & travel", keys: ["spend", "deadlines", "travel"] },
-  { name: "Organise & protect", keys: ["rules", "riskscan"] },
+  { name: "Organise & protect", keys: ["rules", "riskscan", "categorize", "fileindex"] },
 ];
 
 const READER_GROUPS: { name: string; keys: FeatureKey[] }[] = [
   { name: "Understand", keys: ["summary", "explain", "tone", "timeline", "translate"] },
-  { name: "Reply", keys: ["replies", "variants", "counter", "decline", "forward", "questions"] },
-  { name: "Extract", keys: ["tasks", "meeting", "ics", "contacts", "files"] },
+  { name: "Reply", keys: ["replies", "variants", "counter", "decline", "forward", "questions", "objections", "replylang"] },
+  { name: "Extract", keys: ["tasks", "meeting", "ics", "contacts", "files", "checklist"] },
   { name: "Verify", keys: ["factcheck", "contract", "riskscan"] },
 ];
 
@@ -186,6 +195,31 @@ Action: open Q3-review.pdf and check slide 4 before Thursday.`,
 };
 
 const EXTRA_RESULTS: Record<string, string> = {
+  newsdigest: `Pricing teardown — 3 SaaS launches repriced this week — Lenny's
+Design systems — new tokens spec shipped — Figma Weekly
+Funding — 2 seed rounds in your space — Term Sheet
+Skip: DealMail, GadgetDrop, WeeklyWidget`,
+  categorize: `Priya Raman — Friday review deck — Work
+Stripe — invoice #4821 — Money
+Delta — itinerary NYC→SFO — Travel
+Spotify — Wrapped is here — Promo`,
+  responsecoach: `Marcus Bell — waiting 6 days — contract may slip — reply today: yes
+Priya Raman — waiting 2 days — deck blocked on you — reply today: yes
+Recruiter (Nomad) — waiting 9 days — low cost — reply today: no
+Today: Marcus, Priya, Finance`,
+  fileindex: `Marcus Bell — redlined MSA (docx) — needs your counter-signature — keep
+Stripe — invoice #4821 (pdf) — March billing — keep
+Priya Raman — Q3 deck (pdf) — review before Thursday — keep
+GadgetDrop — promo banner (png) — marketing noise — discard`,
+  checklist: `1. Send counter on liability cap — you — today
+2. Loop in legal on indemnity — you — tomorrow
+3. Confirm signature date — Marcus — Friday`,
+  objections: `"Our liability cap is standard" — theirs is 3x below market for this contract size
+"We can't move the date" — offer a phased start instead of a full delay
+"Legal already approved it" — ask which clause set they reviewed`,
+  replylang: `Language: Spanish
+
+Hola Marcos, gracias por enviarme los cambios. Estoy de acuerdo con casi todo, pero necesito ajustar el límite de responsabilidad antes de firmar. Te envío mi contrapropuesta esta tarde.`,
   commitments: `Confirm the revenue slide — Priya Raman — Thu 5:00pm
 Answer indemnity language — Marcus Bell — before Wed
 Reply to intro request — Dana Whitfield — no date`,

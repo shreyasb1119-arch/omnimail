@@ -57,7 +57,7 @@ export const WALLPAPERS: { id: string; label: string; url: string }[] = [
 
 
 export const DEFAULT_DARK: Theme = "mono";
-export const DEFAULT_LIGHT: Theme = "nordic";
+export const DEFAULT_LIGHT: Theme = "porcelain";
 export function themeMode(t: Theme): "dark" | "light" {
   if (t === "custom") return settingsStore?.get().customMode ?? "dark";
   return THEMES.find((x) => x.id === t)?.mode ?? "dark";

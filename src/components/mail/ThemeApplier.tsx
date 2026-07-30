@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSettings, themeMode } from "@/lib/store";
 
 /** Resolve a CSS custom property to a concrete color string the canvas can paint. */
@@ -57,6 +57,23 @@ function paintFavicon() {
 
 export function ThemeApplier() {
   const s = useSettings();
+  const [flash, setFlash] = useState(false);
+  const firstRun = useRef(true);
+
+  // Animate whenever the theme (or light/dark mode) changes.
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    const root = document.documentElement;
+    root.classList.add("theme-swapping");
+    setFlash(true);
+    const t1 = window.setTimeout(() => root.classList.remove("theme-swapping"), 560);
+    const t2 = window.setTimeout(() => setFlash(false), 600);
+    return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
+  }, [s.theme, s.customMode]);
+
   useEffect(() => {
     const root = document.documentElement;
     root.setAttribute("data-theme", s.theme);
@@ -85,6 +102,8 @@ export function ThemeApplier() {
           backgroundImage: s.wallpaperUrl ? `url("${s.wallpaperUrl.replace(/"/g, '\\"')}")` : undefined,
         }}
       />
+      <div className={`theme-flash ${flash ? "is-on" : ""}`} aria-hidden="true" />
     </>
   );
 }
+

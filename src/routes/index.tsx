@@ -35,7 +35,9 @@ import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtra
   aiRuleBuilder, aiDailyPlan, aiDuplicateScan, aiThreadTimeline, aiExplainSimply, aiToneVariants,
   aiCounterProposal, aiPoliteDecline, aiCalendarDraft, aiExtractContacts,
   aiWaitingOnThem, aiWeeklyRecap, aiInboxRiskScan, aiOpportunityFinder,
-  aiFactCheck, aiContractRisk, aiForwardBlurb, aiClarifyingQuestions } from "@/lib/ai";
+  aiFactCheck, aiContractRisk, aiForwardBlurb, aiClarifyingQuestions,
+  aiNewsletterDigest, aiBulkCategorize, aiResponseCoach, aiAttachmentIndex,
+  aiChecklist, aiObjections, aiReplyInLanguage } from "@/lib/ai";
 import type { AssistantAction } from "@/lib/ai";
 import { startScheduler, scheduleStore, useScheduled, type ScheduledMessage } from "@/lib/schedule";
 import { printMessageAsPdf, printImageAsPdf, printTextAsPdf } from "@/lib/printpdf";
@@ -159,7 +161,9 @@ function App() {
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [islandHover, setIslandHover] = useState(false);
   const [searchExplain, setSearchExplain] = useState("");
+  const islandShown = islandHover || searchOpen;
   const [oldestFirst, setOldestFirst] = useState(false);
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
   const [readerAiOpen, setReaderAiOpen] = useState(false);
@@ -750,6 +754,14 @@ function App() {
       info: "Sweeps every loaded message for phishing, spoofed senders and invoice fraud instead of checking one email at a time." },
     { id: "opps", label: "Opportunity Finder", icon: Crown, run: () => runInboxTool("opps", "Opportunity finder", aiOpportunityFinder), busy: aiBusy === "opps", badge: 0,
       info: "Digs out warm intros, deals, partnerships and invitations buried in the noise, with the one move to make on each." },
+    { id: "newsdigest", label: "Newsletter Digest", icon: Newspaper, run: () => runInboxTool("newsdigest", "Newsletter digest", aiNewsletterDigest), busy: aiBusy === "newsdigest", badge: 0,
+      info: "Merges every newsletter and automated update in view into one short read, and names the senders you can skip." },
+    { id: "categorize", label: "Bulk Categorize", icon: Filter, run: () => runInboxTool("categorize", "Bulk categorize", aiBulkCategorize), busy: aiBusy === "categorize", badge: 0,
+      info: "Tags each message in view as Work, Money, Travel, Personal, Newsletter, Promo, Notification or Spam so filing is one pass." },
+    { id: "responsecoach", label: "Response Coach", icon: Gauge, run: () => runInboxTool("responsecoach", "Response coach", aiResponseCoach), busy: aiBusy === "responsecoach", badge: 0,
+      info: "Shows who has been waiting longest, which threads are going stale, and the three replies to send today." },
+    { id: "fileindex", label: "Attachment Index", icon: Paperclip, run: () => runInboxTool("fileindex", "Attachment index", aiAttachmentIndex), busy: aiBusy === "fileindex", badge: 0,
+      info: "Indexes the documents, invoices and contracts that arrived in view, with what each is for and whether to keep it." },
   ];
 
 
@@ -799,20 +811,26 @@ function App() {
       info: "Writes the two-line context blurb plus the ask, so forwarding this to a colleague takes one paste." },
     { id: "questions", label: "Questions to ask", icon: UserSearch, run: () => runReaderTool("questions", "Questions to ask", aiClarifyingQuestions), busy: aiBusy === "questions",
       info: "The 3-5 clarifying questions worth sending back before you commit, ordered by how much they unblock you." },
+    { id: "checklist", label: "Action checklist", icon: ListChecks, run: () => runReaderTool("checklist", "Action checklist", aiChecklist), busy: aiBusy === "checklist",
+      info: "Turns the email into up to six concrete steps, each with an owner and a due moment." },
+    { id: "objections", label: "Anticipate objections", icon: ShieldAlert, run: () => runReaderTool("objections", "Anticipate objections", aiObjections), busy: aiBusy === "objections",
+      info: "Predicts the pushback the sender will raise to your reply and gives you the answer to each." },
+    { id: "replylang", label: "Reply in their language", icon: Languages, run: () => runReaderTool("replylang", "Reply in their language", aiReplyInLanguage), busy: aiBusy === "replylang",
+      info: "Detects the language the email was written in and drafts a natural reply in that same language." },
   ];
 
   // Sub-groups so the big AI menus stay scannable
   const INBOX_GROUPS: { name: string; ids: string[] }[] = [
     { name: "Triage & cleanup", ids: ["triage", "purge", "priority", "dupes", "scout", "cleanup"] },
-    { name: "Daily briefings", ids: ["digest", "plan", "recap", "report"] },
-    { name: "People & follow-ups", ids: ["radar", "waiting", "vip", "pulse", "commitments", "opps"] },
+    { name: "Daily briefings", ids: ["digest", "plan", "recap", "report", "newsdigest"] },
+    { name: "People & follow-ups", ids: ["radar", "waiting", "vip", "pulse", "commitments", "opps", "responsecoach"] },
     { name: "Money, dates & travel", ids: ["spend", "deadlines", "travel", "queue"] },
-    { name: "Organise & protect", ids: ["folders", "rules", "riskscan"] },
+    { name: "Organise & protect", ids: ["folders", "rules", "riskscan", "categorize", "fileindex"] },
   ];
   const READER_GROUPS: { name: string; ids: string[] }[] = [
     { name: "Understand", ids: ["summary", "explain", "tone", "timeline", "translate"] },
-    { name: "Reply", ids: ["replydraft", "replies", "variants", "counter", "decline", "forward", "questions"] },
-    { name: "Extract", ids: ["tasks", "meeting", "ics", "contacts", "files"] },
+    { name: "Reply", ids: ["replydraft", "replies", "variants", "counter", "decline", "forward", "questions", "objections", "replylang"] },
+    { name: "Extract", ids: ["tasks", "meeting", "ics", "contacts", "files", "checklist"] },
     { name: "Verify & export", ids: ["security", "factcheck", "contract", "sender", "pdf"] },
   ];
 
@@ -850,13 +868,20 @@ function App() {
     <TooltipProvider delayDuration={200}>
       <ThemeApplier />
       <Toaster position="top-right" richColors />
-      <div className="relative flex h-screen w-screen flex-col gap-3 overflow-hidden p-3 text-foreground">
-        {/* Floating omni search — collapses to a tiny pill until focused */}
-        <div className="animate-drop flex w-full justify-center">
+      <div className="relative flex h-screen w-screen flex-col overflow-hidden p-3 text-foreground">
+        {/* Dynamic island — hidden until the pointer reaches the top edge */}
+        <div className="island-zone" onMouseEnter={() => setIslandHover(true)} />
+        <div className={`island-nub ${islandShown ? "is-hidden" : ""}`} aria-hidden="true" />
+        <div
+          className={`island-wrap ${islandShown ? "is-open" : ""}`}
+          onMouseEnter={() => setIslandHover(true)}
+          onMouseLeave={() => setIslandHover(false)}
+        >
           <div
             onClick={() => { if (!searchOpen) { setSearchOpen(true); setTimeout(() => document.getElementById("search-input")?.focus(), 60); } }}
             className={`glass-cmd search-shell flex items-center gap-2 rounded-full shadow-xl ring-1 ring-border/40 focus-within:ring-2 focus-within:ring-primary/40 ${searchOpen ? "w-full max-w-2xl scale-100 px-4 py-2" : "w-auto max-w-[220px] cursor-pointer px-3 py-1.5 hover:scale-[1.03] hover:ring-primary/40"}`}
           >
+
             {searching ? (
               <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
             ) : looksNaturalLanguage(query) ? (
@@ -912,6 +937,7 @@ function App() {
         </div>
 
         <div className="flex min-h-0 w-full flex-1 gap-3 overflow-hidden">
+
 
           {/* Sidebar */}
           <aside className="glass no-scrollbar flex w-64 shrink-0 flex-col overflow-y-auto rounded-2xl px-3 py-4 shadow-xl">

@@ -43,6 +43,13 @@ const AI_FEATURES = [
   { icon: FileText, title: "Terms Risk Review", body: "Reads for liability, indemnity, auto-renewal and payment traps, then suggests safer wording." },
   { icon: MessageSquare, title: "Forward Note", body: "Writes the two-line context plus the ask, so handing a thread to a colleague takes one paste." },
   { icon: UserSearch, title: "Questions To Ask", body: "The clarifying questions worth sending back before you commit, ordered by how much they unblock you." },
+  { icon: Newspaper, title: "Newsletter Digest", body: "Merges every newsletter and automated update into one short read, and names the senders you can safely skip." },
+  { icon: Sparkle, title: "Bulk Categorize", body: "Tags every message as Work, Money, Travel, Personal, Newsletter, Promo, Notification or Spam so filing is a single pass." },
+  { icon: Clock, title: "Response Coach", body: "Shows who has waited longest, which threads are going stale, and the three replies to send today." },
+  { icon: Paperclip, title: "Attachment Index", body: "Indexes the documents, invoices and contracts that landed in your inbox, with what each is for and whether to keep it." },
+  { icon: ListChecks, title: "Action Checklist", body: "Turns any email into up to six concrete steps, each with an owner and a due moment." },
+  { icon: ShieldAlert, title: "Anticipate Objections", body: "Predicts the pushback your reply will get and hands you the answer to each one before you send." },
+  { icon: Languages, title: "Reply In Their Language", body: "Detects the language an email was written in and drafts a natural reply in that same language." },
 ];
 
 const CORE_FEATURES = [
@@ -263,7 +270,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       {/* AI features */}
       <section className="reveal mx-auto max-w-6xl px-6 pb-16">
         <div className="mb-6 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight">Thirty AI features, grouped so you can find them</h2>
+          <h2 className="text-3xl font-semibold tracking-tight">Thirty-seven AI features, grouped so you can find them</h2>
           <p className="mt-2 text-sm text-muted-foreground">Every one of them works on your live mail.</p>
         </div>
         <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
