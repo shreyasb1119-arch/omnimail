@@ -754,6 +754,14 @@ function App() {
       info: "Sweeps every loaded message for phishing, spoofed senders and invoice fraud instead of checking one email at a time." },
     { id: "opps", label: "Opportunity Finder", icon: Crown, run: () => runInboxTool("opps", "Opportunity finder", aiOpportunityFinder), busy: aiBusy === "opps", badge: 0,
       info: "Digs out warm intros, deals, partnerships and invitations buried in the noise, with the one move to make on each." },
+    { id: "newsdigest", label: "Newsletter Digest", icon: Newspaper, run: () => runInboxTool("newsdigest", "Newsletter digest", aiNewsletterDigest), busy: aiBusy === "newsdigest", badge: 0,
+      info: "Merges every newsletter and automated update in view into one short read, and names the senders you can skip." },
+    { id: "categorize", label: "Bulk Categorize", icon: Filter, run: () => runInboxTool("categorize", "Bulk categorize", aiBulkCategorize), busy: aiBusy === "categorize", badge: 0,
+      info: "Tags each message in view as Work, Money, Travel, Personal, Newsletter, Promo, Notification or Spam so filing is one pass." },
+    { id: "responsecoach", label: "Response Coach", icon: Gauge, run: () => runInboxTool("responsecoach", "Response coach", aiResponseCoach), busy: aiBusy === "responsecoach", badge: 0,
+      info: "Shows who has been waiting longest, which threads are going stale, and the three replies to send today." },
+    { id: "fileindex", label: "Attachment Index", icon: Paperclip, run: () => runInboxTool("fileindex", "Attachment index", aiAttachmentIndex), busy: aiBusy === "fileindex", badge: 0,
+      info: "Indexes the documents, invoices and contracts that arrived in view, with what each is for and whether to keep it." },
   ];
 
 
