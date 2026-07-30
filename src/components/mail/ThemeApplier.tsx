@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSettings, themeMode } from "@/lib/store";
 
 /** Resolve a CSS custom property to a concrete color string the canvas can paint. */
