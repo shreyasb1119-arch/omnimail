@@ -76,7 +76,9 @@ type FeatureKey =
   | "commitments" | "spend" | "travel" | "deadlines" | "pulse" | "plan" | "rules" | "dupes"
   | "timeline" | "explain" | "variants" | "counter" | "decline" | "ics" | "contacts"
   | "waiting" | "recap" | "riskscan" | "opps"
-  | "factcheck" | "contract" | "forward" | "questions";
+  | "factcheck" | "contract" | "forward" | "questions"
+  | "newsdigest" | "categorize" | "responsecoach" | "fileindex"
+  | "checklist" | "objections" | "replylang";
 
 const INBOX_FEATURES: { key: FeatureKey; label: string; icon: any; blurb: string }[] = [
   { key: "triage", label: "Smart Triage", icon: Filter, blurb: "Tags every message High / Low / Cold." },
