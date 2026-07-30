@@ -850,13 +850,20 @@ function App() {
     <TooltipProvider delayDuration={200}>
       <ThemeApplier />
       <Toaster position="top-right" richColors />
-      <div className="relative flex h-screen w-screen flex-col gap-3 overflow-hidden p-3 text-foreground">
-        {/* Floating omni search — collapses to a tiny pill until focused */}
-        <div className="animate-drop flex w-full justify-center">
+      <div className="relative flex h-screen w-screen flex-col overflow-hidden p-3 text-foreground">
+        {/* Dynamic island — hidden until the pointer reaches the top edge */}
+        <div className="island-zone" onMouseEnter={() => setIslandHover(true)} />
+        <div className={`island-nub ${islandShown ? "is-hidden" : ""}`} aria-hidden="true" />
+        <div
+          className={`island-wrap ${islandShown ? "is-open" : ""}`}
+          onMouseEnter={() => setIslandHover(true)}
+          onMouseLeave={() => setIslandHover(false)}
+        >
           <div
             onClick={() => { if (!searchOpen) { setSearchOpen(true); setTimeout(() => document.getElementById("search-input")?.focus(), 60); } }}
             className={`glass-cmd search-shell flex items-center gap-2 rounded-full shadow-xl ring-1 ring-border/40 focus-within:ring-2 focus-within:ring-primary/40 ${searchOpen ? "w-full max-w-2xl scale-100 px-4 py-2" : "w-auto max-w-[220px] cursor-pointer px-3 py-1.5 hover:scale-[1.03] hover:ring-primary/40"}`}
           >
+
             {searching ? (
               <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
             ) : looksNaturalLanguage(query) ? (
