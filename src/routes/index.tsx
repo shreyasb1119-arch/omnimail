@@ -479,7 +479,7 @@ function App() {
       if (e.key === "j") { e.preventDefault(); setCursorIndex((i) => Math.min(viewMessages.length - 1, i + 1)); }
       else if (e.key === "k") { e.preventDefault(); setCursorIndex((i) => Math.max(0, i - 1)); }
       else if (e.key === "c") { e.preventDefault(); setComposeInitial(undefined); setComposeOpen(true); }
-      else if (e.key === "/") { e.preventDefault(); setSearchOpen(true); setTimeout(() => document.getElementById("search-input")?.focus(), 60); }
+      else if (e.key === "/") { e.preventDefault(); setIslandHover(true); setSearchFocused(true); setSearchOpen(true); setTimeout(() => document.getElementById("search-input")?.focus(), 60); }
       else if (e.key === "Enter" && cur) { e.preventDefault(); openMessage(cur.id); }
       else if (e.key === "e" && cur) { e.preventDefault(); doArchive([cur.id]); }
       else if (e.key === "#" && cur) { e.preventDefault(); doTrash([cur.id]); }
@@ -877,7 +877,10 @@ function App() {
         <div
           className={`island-wrap ${islandShown ? "is-open" : ""}`}
           onMouseEnter={() => setIslandHover(true)}
-          onMouseLeave={() => setIslandHover(false)}
+          onMouseLeave={() => {
+            setIslandHover(false);
+            if (!searchFocused) setSearchOpen(false);
+          }}
         >
           <div
             onClick={() => { if (!searchOpen) { setSearchOpen(true); setTimeout(() => document.getElementById("search-input")?.focus(), 60); } }}
@@ -903,7 +906,8 @@ function App() {
               onKeyDown={(e) => { if (e.key === "Enter") void runSearch(); }}
               className="search-field h-8 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
               aria-label="Search mail or ask the AI"
-              onBlur={() => { if (!query) setSearchOpen(false); }}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => { setSearchFocused(false); if (!islandHover) setSearchOpen(false); }}
             />
             )}
             {query && (
