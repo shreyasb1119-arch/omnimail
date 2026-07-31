@@ -965,9 +965,9 @@ function App() {
 
             <Button
               onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
-              className="mb-3 justify-start gap-2 rounded-xl"
+              className="hover-mag mb-3 justify-start gap-2 rounded-xl"
             >
-              <PenSquare className="h-4 w-4" /> Compose
+              <PenSquare className="h-4 w-4" /> <span className="mag-text">Compose</span>
             </Button>
             <nav className="space-y-0.5">
               {SYSTEM_FOLDERS.map((f) => (
