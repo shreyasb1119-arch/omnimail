@@ -974,11 +974,11 @@ function App() {
                 <button
                   key={f.id}
                   onClick={() => { setFolder(f.id); setActiveQuery(""); setQuery(""); }}
-                  className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition ${
+                  className={`hover-mag flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm ${
                     folder === f.id && !activeQuery ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                   }`}
                 >
-                  <f.icon className="h-4 w-4" /> {f.label}
+                  <f.icon className="h-4 w-4" /> <span className="mag-text">{f.label}</span>
                 </button>
               ))}
             </nav>
