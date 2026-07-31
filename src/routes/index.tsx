@@ -37,7 +37,7 @@ import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtra
   aiWaitingOnThem, aiWeeklyRecap, aiInboxRiskScan, aiOpportunityFinder,
   aiFactCheck, aiContractRisk, aiForwardBlurb, aiClarifyingQuestions,
   aiNewsletterDigest, aiBulkCategorize, aiResponseCoach, aiAttachmentIndex,
-  aiChecklist, aiObjections, aiReplyInLanguage } from "@/lib/ai";
+  aiChecklist, aiObjections, aiReplyInLanguage, aiSnoozePlan, aiDecisionBrief } from "@/lib/ai";
 import type { AssistantAction } from "@/lib/ai";
 import { startScheduler, scheduleStore, useScheduled, type ScheduledMessage } from "@/lib/schedule";
 import { printMessageAsPdf, printImageAsPdf, printTextAsPdf } from "@/lib/printpdf";
@@ -162,8 +162,10 @@ function App() {
   const [searching, setSearching] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [islandHover, setIslandHover] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
   const [searchExplain, setSearchExplain] = useState("");
-  const islandShown = islandHover || searchOpen;
+  // Stays down only while the pointer is on it or you're actively typing in it.
+  const islandShown = islandHover || searchFocused;
   const [oldestFirst, setOldestFirst] = useState(false);
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
   const [readerAiOpen, setReaderAiOpen] = useState(false);
@@ -477,7 +479,7 @@ function App() {
       if (e.key === "j") { e.preventDefault(); setCursorIndex((i) => Math.min(viewMessages.length - 1, i + 1)); }
       else if (e.key === "k") { e.preventDefault(); setCursorIndex((i) => Math.max(0, i - 1)); }
       else if (e.key === "c") { e.preventDefault(); setComposeInitial(undefined); setComposeOpen(true); }
-      else if (e.key === "/") { e.preventDefault(); setSearchOpen(true); setTimeout(() => document.getElementById("search-input")?.focus(), 60); }
+      else if (e.key === "/") { e.preventDefault(); setIslandHover(true); setSearchFocused(true); setSearchOpen(true); setTimeout(() => document.getElementById("search-input")?.focus(), 60); }
       else if (e.key === "Enter" && cur) { e.preventDefault(); openMessage(cur.id); }
       else if (e.key === "e" && cur) { e.preventDefault(); doArchive([cur.id]); }
       else if (e.key === "#" && cur) { e.preventDefault(); doTrash([cur.id]); }
@@ -762,6 +764,8 @@ function App() {
       info: "Shows who has been waiting longest, which threads are going stale, and the three replies to send today." },
     { id: "fileindex", label: "Attachment Index", icon: Paperclip, run: () => runInboxTool("fileindex", "Attachment index", aiAttachmentIndex), busy: aiBusy === "fileindex", badge: 0,
       info: "Indexes the documents, invoices and contracts that arrived in view, with what each is for and whether to keep it." },
+    { id: "snooze", label: "Snooze Plan", icon: Clock, run: () => runInboxTool("snooze", "Snooze plan", aiSnoozePlan), busy: aiBusy === "snooze", badge: 0,
+      info: "Decides what can leave the inbox now and exactly when it should come back, so only today's mail stays in front of you." },
   ];
 
 
@@ -815,6 +819,8 @@ function App() {
       info: "Turns the email into up to six concrete steps, each with an owner and a due moment." },
     { id: "objections", label: "Anticipate objections", icon: ShieldAlert, run: () => runReaderTool("objections", "Anticipate objections", aiObjections), busy: aiBusy === "objections",
       info: "Predicts the pushback the sender will raise to your reply and gives you the answer to each." },
+    { id: "decision", label: "Decision Brief", icon: Gauge, run: () => runReaderTool("decision", "Decision brief", aiDecisionBrief), busy: aiBusy === "decision",
+      info: "Strips the email down to the decision it demands: TL;DR, the choice, the deadline, what breaks if you ignore it, and the move to make." },
     { id: "replylang", label: "Reply in their language", icon: Languages, run: () => runReaderTool("replylang", "Reply in their language", aiReplyInLanguage), busy: aiBusy === "replylang",
       info: "Detects the language the email was written in and drafts a natural reply in that same language." },
   ];
@@ -825,10 +831,10 @@ function App() {
     { name: "Daily briefings", ids: ["digest", "plan", "recap", "report", "newsdigest"] },
     { name: "People & follow-ups", ids: ["radar", "waiting", "vip", "pulse", "commitments", "opps", "responsecoach"] },
     { name: "Money, dates & travel", ids: ["spend", "deadlines", "travel", "queue"] },
-    { name: "Organise & protect", ids: ["folders", "rules", "riskscan", "categorize", "fileindex"] },
+    { name: "Organise & protect", ids: ["folders", "rules", "riskscan", "categorize", "fileindex", "snooze"] },
   ];
   const READER_GROUPS: { name: string; ids: string[] }[] = [
-    { name: "Understand", ids: ["summary", "explain", "tone", "timeline", "translate"] },
+    { name: "Understand", ids: ["summary", "decision", "explain", "tone", "timeline", "translate"] },
     { name: "Reply", ids: ["replydraft", "replies", "variants", "counter", "decline", "forward", "questions", "objections", "replylang"] },
     { name: "Extract", ids: ["tasks", "meeting", "ics", "contacts", "files", "checklist"] },
     { name: "Verify & export", ids: ["security", "factcheck", "contract", "sender", "pdf"] },
@@ -875,7 +881,10 @@ function App() {
         <div
           className={`island-wrap ${islandShown ? "is-open" : ""}`}
           onMouseEnter={() => setIslandHover(true)}
-          onMouseLeave={() => setIslandHover(false)}
+          onMouseLeave={() => {
+            setIslandHover(false);
+            if (!searchFocused) setSearchOpen(false);
+          }}
         >
           <div
             onClick={() => { if (!searchOpen) { setSearchOpen(true); setTimeout(() => document.getElementById("search-input")?.focus(), 60); } }}
@@ -901,7 +910,8 @@ function App() {
               onKeyDown={(e) => { if (e.key === "Enter") void runSearch(); }}
               className="search-field h-8 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
               aria-label="Search mail or ask the AI"
-              onBlur={() => { if (!query) setSearchOpen(false); }}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => { setSearchFocused(false); if (!islandHover) setSearchOpen(false); }}
             />
             )}
             {query && (
@@ -959,20 +969,20 @@ function App() {
 
             <Button
               onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
-              className="mb-3 justify-start gap-2 rounded-xl"
+              className="hover-mag mb-3 justify-start gap-2 rounded-xl"
             >
-              <PenSquare className="h-4 w-4" /> Compose
+              <PenSquare className="h-4 w-4" /> <span className="mag-text">Compose</span>
             </Button>
             <nav className="space-y-0.5">
               {SYSTEM_FOLDERS.map((f) => (
                 <button
                   key={f.id}
                   onClick={() => { setFolder(f.id); setActiveQuery(""); setQuery(""); }}
-                  className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition ${
+                  className={`hover-mag flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm ${
                     folder === f.id && !activeQuery ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                   }`}
                 >
-                  <f.icon className="h-4 w-4" /> {f.label}
+                  <f.icon className="h-4 w-4" /> <span className="mag-text">{f.label}</span>
                 </button>
               ))}
             </nav>
@@ -1033,7 +1043,7 @@ function App() {
                     <Button
                       variant="default"
                       size="sm"
-                      className="press w-full justify-start gap-2"
+                      className="press hover-mag w-full justify-start gap-2"
                       onClick={() => setAssistantOpen(true)}
                     >
                       <MessageSquare className="h-3.5 w-3.5" /> Chat Assistant
@@ -1047,7 +1057,7 @@ function App() {
                         <div key={g.name} className="rounded-lg border border-border/50 bg-background/30">
                           <button
                             onClick={() => setOpenAiGroup(open ? null : g.name)}
-                            className="press flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                            className="press hover-mag flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
                           >
                             {g.name}
                             <span className="ml-auto text-[10px] font-normal normal-case text-muted-foreground/60">{tools.length}</span>
@@ -1061,7 +1071,7 @@ function App() {
                                     <Button
                                       variant="secondary"
                                       size="sm"
-                                      className="press flex-1 justify-start gap-2"
+                                      className="press hover-mag flex-1 justify-start gap-2"
                                       onClick={t.run}
                                       disabled={t.busy}
                                     >
@@ -1164,7 +1174,7 @@ function App() {
                   <div
                     key={m.id}
                     onClick={() => { setCursorIndex(i); openMessage(m.id); }}
-                    className={`animate-in-up group flex cursor-pointer gap-2 border-b border-border/40 px-3 py-3 transition ${
+                    className={`animate-in-up hover-mag group flex cursor-pointer gap-2 border-b border-border/40 px-3 py-3 ${
                       isOpen ? "bg-accent/60" : isCursor ? "bg-accent/30" : "hover:bg-accent/20"
                     }`}
                   >
@@ -1186,13 +1196,13 @@ function App() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <div className={`truncate text-sm ${m.unread ? "font-semibold" : "font-medium text-muted-foreground"}`}>
+                        <div className={`mag-text truncate text-sm ${m.unread ? "font-semibold" : "font-medium text-muted-foreground"}`}>
                           {m.from.split("<")[0].replace(/"/g, "").trim() || m.fromEmail}
                         </div>
                         {labelBadge(aiLabels[m.id])}
                         <div className="ml-auto shrink-0 text-[10px] text-muted-foreground">{relTime(m.date)}</div>
                       </div>
-                      <div className={`mt-0.5 truncate text-sm ${m.unread ? "text-foreground" : "text-muted-foreground"}`}>
+                      <div className={`mag-text mt-0.5 truncate text-sm ${m.unread ? "text-foreground" : "text-muted-foreground"}`}>
                         {m.subject || "(no subject)"}
                       </div>
                       <div className="truncate text-xs text-muted-foreground/80">{m.snippet}</div>
@@ -1252,7 +1262,7 @@ function App() {
                             <div key={g.name} className="rounded-lg border border-border/50 bg-background/30">
                               <button
                                 onClick={() => setOpenReaderGroup(open ? null : g.name)}
-                                className="press flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                                className="press hover-mag flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
                               >
                                 {g.name}
                                 <span className="ml-auto text-[10px] font-normal normal-case text-muted-foreground/60">{tools.length}</span>

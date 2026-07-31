@@ -49,6 +49,9 @@ const AI_FEATURES = [
   { icon: Paperclip, title: "Attachment Index", body: "Indexes the documents, invoices and contracts that landed in your inbox, with what each is for and whether to keep it." },
   { icon: ListChecks, title: "Action Checklist", body: "Turns any email into up to six concrete steps, each with an owner and a due moment." },
   { icon: ShieldAlert, title: "Anticipate Objections", body: "Predicts the pushback your reply will get and hands you the answer to each one before you send." },
+  { icon: Clock, title: "Snooze Plan", body: "Decides what can leave the inbox now and exactly when each thing should come back, so only today's mail stays in front of you." },
+  { icon: Gauge, title: "Decision Brief", body: "Strips an email to the decision it demands: TL;DR, the choice, the deadline, what breaks if you ignore it, and the one move to make." },
+  { icon: ShieldCheck, title: "Accuracy engine", body: "Every AI tool runs on a strict grounding rule set — no invented senders, dates or amounts, and a plain \"not in this mail\" when the answer isn't there." },
   { icon: Languages, title: "Reply In Their Language", body: "Detects the language an email was written in and drafts a natural reply in that same language." },
 ];
 
@@ -69,6 +72,10 @@ const CORE_FEATURES = [
   { icon: Sun, title: "Ten built-in wallpapers", body: "Pick a ready-made backdrop, or bring your own image and tune its blur and visibility." },
   { icon: Sparkles, title: "AI menu, not AI clutter", body: "Every AI tool lives behind one button that drops down when you want it and disappears when you don't." },
   { icon: Command, title: "Grouped AI sub-menus", body: "Thirty tools sorted into Triage, Briefings, People, Money and Protect — so you find the right one in a second." },
+  { icon: Search, title: "Search that closes itself", body: "The omni island slides away the moment your pointer leaves it — no clicking empty space to dismiss a search bar." },
+  { icon: Sparkles, title: "Magnifying hover", body: "Rows, folders, Compose and every AI tool gently scale and sharpen under the cursor, so you always know what you're about to hit." },
+  { icon: Gauge, title: "Grounded AI by default", body: "Shared accuracy rules sit in front of all forty-plus tools, so answers stay tied to your actual mail." },
+  { icon: ListChecks, title: "Inbox Zero playbook", body: "A built-in method, not just tools — triage, purge, snooze, respond, in that order, in under fifteen minutes a day." },
   { icon: Search, title: "Search that gets out of the way", body: "A tiny pill until you touch it, then it glides open into a full omni bar and glides shut when you're done." },
 ];
 
@@ -270,7 +277,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       {/* AI features */}
       <section className="reveal mx-auto max-w-6xl px-6 pb-16">
         <div className="mb-6 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight">Thirty-seven AI features, grouped so you can find them</h2>
+          <h2 className="text-3xl font-semibold tracking-tight">Forty AI features, grouped so you can find them</h2>
           <p className="mt-2 text-sm text-muted-foreground">Every one of them works on your live mail.</p>
         </div>
         <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -301,6 +308,68 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Inbox Zero article */}
+      <section className="reveal mx-auto max-w-3xl px-6 pb-16">
+        <article className="glass rounded-3xl p-8 shadow-xl">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1 text-xs text-muted-foreground">
+            <ListChecks className="h-3 w-3 text-primary" /> Guide
+          </div>
+          <h2 className="text-3xl font-semibold tracking-tight">How to reach inbox zero — and stay there</h2>
+          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+            Inbox zero was never about an empty mailbox. It is about an inbox that only holds what still
+            needs you. Most people fail at it because they treat every message as a decision to make
+            twice: once when it arrives, once when they finally answer it. The fix is to make the
+            decision exactly once, and to let software make the obvious ones for you.
+          </p>
+
+          <h3 className="mt-7 text-lg font-semibold tracking-tight">1. Sort before you read</h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Run Smart Triage first. Every message gets tagged High, Low or Cold before you have read a
+            single word, so the noise visually recedes and your eye lands on the four things that
+            actually matter. Reading first and sorting later is how a morning disappears.
+          </p>
+
+          <h3 className="mt-6 text-lg font-semibold tracking-tight">2. Delete the mail you were never going to answer</h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Auto-Purge sweeps cold outreach and promo junk to Trash — reversibly, never permanently.
+            Then let Unsubscribe Scout name the senders quietly eating your week. Most inboxes shrink by
+            a third before a single reply is written.
+          </p>
+
+          <h3 className="mt-6 text-lg font-semibold tracking-tight">3. Snooze what isn't due today</h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            A message you cannot act on today is not an inbox item, it is a future one. Snooze Plan reads
+            what is loaded and tells you what should leave now and precisely when it should return, so
+            today's inbox contains only today's work.
+          </p>
+
+          <h3 className="mt-6 text-lg font-semibold tracking-tight">4. Answer in one pass</h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            For anything left, open Decision Brief: the choice, the deadline, and what breaks if you
+            ignore it. Then Draft Full Reply writes the answer and you edit rather than compose. Anything
+            that needs to land later goes out through AI Scheduled Send instead of sitting in drafts.
+          </p>
+
+          <h3 className="mt-6 text-lg font-semibold tracking-tight">5. Close the loop the next morning</h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Follow-up Radar shows the threads still waiting on you; Waiting On Them shows the ones
+            waiting on someone else. Two minutes there is what keeps inbox zero from being a one-time
+            stunt.
+          </p>
+
+          <div className="mt-7 rounded-2xl border border-border/50 bg-card/40 p-5">
+            <div className="text-sm font-semibold">The fifteen-minute loop</div>
+            <ol className="mt-2 space-y-1.5 text-xs leading-relaxed text-muted-foreground">
+              <li>1. Triage — let the labels land before you read.</li>
+              <li>2. Purge — cold and promo out, reversibly.</li>
+              <li>3. Snooze — anything not due today.</li>
+              <li>4. Reply — Decision Brief, then Draft Full Reply.</li>
+              <li>5. Sweep — Follow-up Radar and Waiting On Them.</li>
+            </ol>
+          </div>
+        </article>
       </section>
 
       {/* CTA */}
