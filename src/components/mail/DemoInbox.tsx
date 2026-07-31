@@ -461,7 +461,7 @@ export function DemoInbox() {
                                 <button
                                   key={f.key}
                                   onClick={() => run(f.key, f.label)}
-                                  className="press flex w-full items-start gap-2 rounded-lg border border-border/50 bg-card/50 px-2.5 py-2 text-left hover:border-primary/60"
+                                  className="press hover-mag flex w-full items-start gap-2 rounded-lg border border-border/50 bg-card/50 px-2.5 py-2 text-left hover:border-primary/60"
                                 >
                                   <f.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
                                   <span>
@@ -491,7 +491,7 @@ export function DemoInbox() {
               <div
                 key={m.id}
                 onClick={() => { setOpenId(m.id); setResult(null); setReplies([]); setMsgs((p) => p.map((x) => x.id === m.id ? { ...x, unread: false } : x)); }}
-                className={`group flex cursor-pointer gap-2 border-b border-border/40 px-3 py-2.5 transition-colors duration-200 ${
+                className={`hover-mag group flex cursor-pointer gap-2 border-b border-border/40 px-3 py-2.5 ${
                   openId === m.id ? "bg-accent/60" : "hover:bg-accent/25"
                 }`}
               >
@@ -574,7 +574,7 @@ export function DemoInbox() {
                                   <button
                                     key={f.key}
                                     onClick={() => run(f.key, f.label)}
-                                    className="press flex items-start gap-2 rounded-lg border border-border/50 bg-card/50 px-2.5 py-2 text-left hover:border-primary/60"
+                                    className="press hover-mag flex items-start gap-2 rounded-lg border border-border/50 bg-card/50 px-2.5 py-2 text-left hover:border-primary/60"
                                   >
                                     <f.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
                                     <span>
