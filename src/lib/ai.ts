@@ -1,7 +1,19 @@
 import { settingsStore } from "./store";
 import { lovableAiChat } from "./ai.functions";
 
-export async function aiChat(prompt: string, system = ""): Promise<string> {
+const BASE_RULES = `You are Omni Mail's email intelligence engine. Accuracy rules, always:
+- Use ONLY the email data given. Never invent senders, dates, amounts, links or facts.
+- If the data does not support an answer, say so plainly in one line instead of guessing.
+- Quote names, amounts and dates exactly as written; write dates as "Mon D, YYYY".
+- Be specific and short. No preamble, no sign-off, no markdown headers, no repeating the prompt.
+- Never output more items than the data supports.`;
+
+function withRules(system: string) {
+  return system ? `${BASE_RULES}\n\n${system}` : BASE_RULES;
+}
+
+export async function aiChat(prompt: string, userSystem = ""): Promise<string> {
+  const system = withRules(userSystem);
   const key = settingsStore.get().geminiKey.trim();
   if (key) {
     // Call Gemini directly from the browser
@@ -762,5 +774,25 @@ Output lines: "<likely objection> — <your answer>". Max 5. No preamble.`;
 export async function aiReplyInLanguage(subject: string, from: string, body: string) {
   const system = `Detect the language this email is written in and write a complete, natural reply in that same language.
 Start with a line "Language: <name>", then a blank line, then only the reply body. No preamble.`;
+  return aiChat(mailOf(subject, from, body), system);
+}
+
+/** What to snooze and until when, so the inbox only shows what's live today. */
+export async function aiSnoozePlan(items: Item[]) {
+  const system = `Decide what should leave the inbox now and come back later.
+For each email that is not actionable today, output "<sender> — <subject, trimmed> — snooze until <specific day or date> — <why>".
+Skip anything genuinely due today. End with "Stay: <count> emails still need you today.".`;
+  return aiChat(listOf(items), system);
+}
+
+/** One-line executive brief: the decision this email demands. */
+export async function aiDecisionBrief(subject: string, from: string, body: string) {
+  const system = `Reduce this email to the decision it demands.
+Output exactly these lines:
+TL;DR: <one sentence>
+Decision: <the choice you must make, or "None — FYI only">
+Deadline: <date or "none stated">
+If you ignore it: <consequence>
+Recommended: <the single move to make>`;
   return aiChat(mailOf(subject, from, body), system);
 }
