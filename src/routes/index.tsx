@@ -162,8 +162,10 @@ function App() {
   const [searching, setSearching] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [islandHover, setIslandHover] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
   const [searchExplain, setSearchExplain] = useState("");
-  const islandShown = islandHover || searchOpen;
+  // Stays down only while the pointer is on it or you're actively typing in it.
+  const islandShown = islandHover || searchFocused;
   const [oldestFirst, setOldestFirst] = useState(false);
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
   const [readerAiOpen, setReaderAiOpen] = useState(false);
