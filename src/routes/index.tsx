@@ -37,7 +37,7 @@ import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtra
   aiWaitingOnThem, aiWeeklyRecap, aiInboxRiskScan, aiOpportunityFinder,
   aiFactCheck, aiContractRisk, aiForwardBlurb, aiClarifyingQuestions,
   aiNewsletterDigest, aiBulkCategorize, aiResponseCoach, aiAttachmentIndex,
-  aiChecklist, aiObjections, aiReplyInLanguage } from "@/lib/ai";
+  aiChecklist, aiObjections, aiReplyInLanguage, aiSnoozePlan, aiDecisionBrief } from "@/lib/ai";
 import type { AssistantAction } from "@/lib/ai";
 import { startScheduler, scheduleStore, useScheduled, type ScheduledMessage } from "@/lib/schedule";
 import { printMessageAsPdf, printImageAsPdf, printTextAsPdf } from "@/lib/printpdf";
@@ -764,6 +764,8 @@ function App() {
       info: "Shows who has been waiting longest, which threads are going stale, and the three replies to send today." },
     { id: "fileindex", label: "Attachment Index", icon: Paperclip, run: () => runInboxTool("fileindex", "Attachment index", aiAttachmentIndex), busy: aiBusy === "fileindex", badge: 0,
       info: "Indexes the documents, invoices and contracts that arrived in view, with what each is for and whether to keep it." },
+    { id: "snooze", label: "Snooze Plan", icon: Clock, run: () => runInboxTool("snooze", "Snooze plan", aiSnoozePlan), busy: aiBusy === "snooze", badge: 0,
+      info: "Decides what can leave the inbox now and exactly when it should come back, so only today's mail stays in front of you." },
   ];
 
 
@@ -817,6 +819,8 @@ function App() {
       info: "Turns the email into up to six concrete steps, each with an owner and a due moment." },
     { id: "objections", label: "Anticipate objections", icon: ShieldAlert, run: () => runReaderTool("objections", "Anticipate objections", aiObjections), busy: aiBusy === "objections",
       info: "Predicts the pushback the sender will raise to your reply and gives you the answer to each." },
+    { id: "decision", label: "Decision Brief", icon: Gauge, run: () => runReaderTool("decision", "Decision brief", aiDecisionBrief), busy: aiBusy === "decision",
+      info: "Strips the email down to the decision it demands: TL;DR, the choice, the deadline, what breaks if you ignore it, and the move to make." },
     { id: "replylang", label: "Reply in their language", icon: Languages, run: () => runReaderTool("replylang", "Reply in their language", aiReplyInLanguage), busy: aiBusy === "replylang",
       info: "Detects the language the email was written in and drafts a natural reply in that same language." },
   ];
@@ -827,10 +831,10 @@ function App() {
     { name: "Daily briefings", ids: ["digest", "plan", "recap", "report", "newsdigest"] },
     { name: "People & follow-ups", ids: ["radar", "waiting", "vip", "pulse", "commitments", "opps", "responsecoach"] },
     { name: "Money, dates & travel", ids: ["spend", "deadlines", "travel", "queue"] },
-    { name: "Organise & protect", ids: ["folders", "rules", "riskscan", "categorize", "fileindex"] },
+    { name: "Organise & protect", ids: ["folders", "rules", "riskscan", "categorize", "fileindex", "snooze"] },
   ];
   const READER_GROUPS: { name: string; ids: string[] }[] = [
-    { name: "Understand", ids: ["summary", "explain", "tone", "timeline", "translate"] },
+    { name: "Understand", ids: ["summary", "decision", "explain", "tone", "timeline", "translate"] },
     { name: "Reply", ids: ["replydraft", "replies", "variants", "counter", "decline", "forward", "questions", "objections", "replylang"] },
     { name: "Extract", ids: ["tasks", "meeting", "ics", "contacts", "files", "checklist"] },
     { name: "Verify & export", ids: ["security", "factcheck", "contract", "sender", "pdf"] },
