@@ -961,3 +961,36 @@ html.theme-swapping div {
   opacity: 0;
   width: 20px;
 }
+
+/* ---------- Hover magnify (rows, tools, actions) ---------- */
+.hover-mag {
+  transition:
+    transform 220ms cubic-bezier(0.22, 0.9, 0.32, 1),
+    background-color 220ms ease,
+    color 200ms ease,
+    letter-spacing 220ms ease,
+    box-shadow 240ms ease;
+  transform-origin: left center;
+  will-change: transform;
+}
+.hover-mag:hover {
+  transform: scale(1.025);
+  z-index: 2;
+}
+.hover-mag:hover .mag-text,
+.mag-text.is-on {
+  color: var(--foreground);
+  font-weight: 600;
+  letter-spacing: 0.005em;
+}
+.mag-text {
+  transition: color 200ms ease, font-weight 200ms ease, letter-spacing 220ms ease, transform 220ms cubic-bezier(0.22, 0.9, 0.32, 1);
+  display: inline-block;
+}
+.hover-mag:hover .mag-text {
+  transform: scale(1.035);
+}
+.hover-mag-center { transform-origin: center; }
+@media (prefers-reduced-motion: reduce) {
+  .hover-mag:hover, .hover-mag:hover .mag-text { transform: none; }
+}
