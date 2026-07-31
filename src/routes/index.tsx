@@ -1039,7 +1039,7 @@ function App() {
                     <Button
                       variant="default"
                       size="sm"
-                      className="press w-full justify-start gap-2"
+                      className="press hover-mag w-full justify-start gap-2"
                       onClick={() => setAssistantOpen(true)}
                     >
                       <MessageSquare className="h-3.5 w-3.5" /> Chat Assistant
@@ -1053,7 +1053,7 @@ function App() {
                         <div key={g.name} className="rounded-lg border border-border/50 bg-background/30">
                           <button
                             onClick={() => setOpenAiGroup(open ? null : g.name)}
-                            className="press flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                            className="press hover-mag flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
                           >
                             {g.name}
                             <span className="ml-auto text-[10px] font-normal normal-case text-muted-foreground/60">{tools.length}</span>
@@ -1067,7 +1067,7 @@ function App() {
                                     <Button
                                       variant="secondary"
                                       size="sm"
-                                      className="press flex-1 justify-start gap-2"
+                                      className="press hover-mag flex-1 justify-start gap-2"
                                       onClick={t.run}
                                       disabled={t.busy}
                                     >
@@ -1170,7 +1170,7 @@ function App() {
                   <div
                     key={m.id}
                     onClick={() => { setCursorIndex(i); openMessage(m.id); }}
-                    className={`animate-in-up group flex cursor-pointer gap-2 border-b border-border/40 px-3 py-3 transition ${
+                    className={`animate-in-up hover-mag group flex cursor-pointer gap-2 border-b border-border/40 px-3 py-3 ${
                       isOpen ? "bg-accent/60" : isCursor ? "bg-accent/30" : "hover:bg-accent/20"
                     }`}
                   >
@@ -1192,13 +1192,13 @@ function App() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <div className={`truncate text-sm ${m.unread ? "font-semibold" : "font-medium text-muted-foreground"}`}>
+                        <div className={`mag-text truncate text-sm ${m.unread ? "font-semibold" : "font-medium text-muted-foreground"}`}>
                           {m.from.split("<")[0].replace(/"/g, "").trim() || m.fromEmail}
                         </div>
                         {labelBadge(aiLabels[m.id])}
                         <div className="ml-auto shrink-0 text-[10px] text-muted-foreground">{relTime(m.date)}</div>
                       </div>
-                      <div className={`mt-0.5 truncate text-sm ${m.unread ? "text-foreground" : "text-muted-foreground"}`}>
+                      <div className={`mag-text mt-0.5 truncate text-sm ${m.unread ? "text-foreground" : "text-muted-foreground"}`}>
                         {m.subject || "(no subject)"}
                       </div>
                       <div className="truncate text-xs text-muted-foreground/80">{m.snippet}</div>
@@ -1258,7 +1258,7 @@ function App() {
                             <div key={g.name} className="rounded-lg border border-border/50 bg-background/30">
                               <button
                                 onClick={() => setOpenReaderGroup(open ? null : g.name)}
-                                className="press flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                                className="press hover-mag flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
                               >
                                 {g.name}
                                 <span className="ml-auto text-[10px] font-normal normal-case text-muted-foreground/60">{tools.length}</span>
