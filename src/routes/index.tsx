@@ -1204,12 +1204,55 @@ function App() {
                 <option value="sender">Sender A–Z</option>
                 <option value="unread">Unread first</option>
               </select>
+              <select
+                aria-label="Select messages"
+                value=""
+                onChange={(e) => {
+                  const v = e.target.value;
+                  const pick = (fn: (m: ParsedMessage) => boolean) => setSelected(new Set(viewMessages.filter(fn).map((m) => m.id)));
+                  if (v === "all") pick(() => true);
+                  else if (v === "none") setSelected(new Set());
+                  else if (v === "read") pick((m) => !m.unread);
+                  else if (v === "unread") pick((m) => m.unread);
+                  else if (v === "starred") pick((m) => m.starred);
+                  else if (v === "attach") pick((m) => m.attachments.length > 0);
+                }}
+                className="rounded-md border border-border/60 bg-card/50 px-2 py-1 text-[11px] text-muted-foreground outline-none hover:text-foreground"
+              >
+                <option value="">Select…</option>
+                <option value="all">All</option>
+                <option value="none">None</option>
+                <option value="read">Read</option>
+                <option value="unread">Unread</option>
+                <option value="starred">Starred</option>
+                <option value="attach">With attachments</option>
+              </select>
               <div className="ml-auto flex items-center gap-1">
                 {selected.size > 0 && (
                   <>
                     <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => doArchive(Array.from(selected))}>
                       <Archive className="h-3.5 w-3.5" /> Archive
                     </Button>
+                    <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => doMarkRead(Array.from(selected), true)}>
+                      <MailOpen className="h-3.5 w-3.5" /> Read
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => doMarkRead(Array.from(selected), false)}>
+                      Unread
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => doSpam(Array.from(selected), folder !== "SPAM")}>
+                      <ShieldAlert className="h-3.5 w-3.5" /> {folder === "SPAM" ? "Not spam" : "Spam"}
+                    </Button>
+                    <select
+                      aria-label="Move selected to folder"
+                      value=""
+                      onChange={(e) => { if (e.target.value) void doMoveToLabel(Array.from(selected), e.target.value); }}
+                      className="rounded-md border border-border/60 bg-card/50 px-2 py-1 text-[11px] text-muted-foreground outline-none hover:text-foreground"
+                    >
+                      <option value="">Move to…</option>
+                      {userLabels.map((l) => (
+                        <option key={l.id} value={l.id}>{l.name}</option>
+                      ))}
+                    </select>
                     <Button size="sm" variant="ghost" className="h-7 gap-1 text-destructive" onClick={() => doTrash(Array.from(selected))}>
                       <Trash2 className="h-3.5 w-3.5" /> Trash
                     </Button>
@@ -1221,6 +1264,7 @@ function App() {
                   </Button>
                 )}
               </div>
+
             </div>
 
             <div ref={listRef} className="no-scrollbar flex-1 overflow-y-auto pt-1.5">
