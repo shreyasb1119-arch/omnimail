@@ -547,6 +547,20 @@ function App() {
       else if (e.key === "e" && cur) { e.preventDefault(); doArchive([cur.id]); }
       else if (e.key === "#" && cur) { e.preventDefault(); doTrash([cur.id]); }
       else if (e.key === "s" && cur) { e.preventDefault(); doStar(cur.id, !cur.starred); }
+      else if (e.key === "u") { e.preventDefault(); setOpenId(null); }
+      else if (e.key === "U" && cur) { e.preventDefault(); doMarkRead([cur.id], false); }
+      else if (e.key === "I" && cur) { e.preventDefault(); doMarkRead([cur.id], true); }
+      else if (e.key === "!" && cur) { e.preventDefault(); doSpam([cur.id], true); }
+      else if (e.key === "b" && cur) { e.preventDefault(); void doSnooze([cur.id], SNOOZE_PRESETS[2].ms()); }
+      else if (e.key === "r" && cur) { e.preventDefault(); openReply(cur, false); }
+      else if (e.key === "a" && cur) { e.preventDefault(); openReply(cur, true); }
+      else if (e.key === "f" && cur) { e.preventDefault(); openForward(cur); }
+      else if (e.key === "p" && cur) { e.preventDefault(); window.print(); }
+      else if (e.key === "x" && cur) {
+        e.preventDefault();
+        setSelected((prev) => { const n = new Set(prev); n.has(cur.id) ? n.delete(cur.id) : n.add(cur.id); return n; });
+      }
+
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
