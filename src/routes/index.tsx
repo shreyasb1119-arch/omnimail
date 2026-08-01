@@ -161,6 +161,11 @@ function App() {
   const [userLabels, setUserLabels] = useState<GmailLabel[]>([]);
   const [labelCounts, setLabelCounts] = useState<Record<string, number>>({});
   const snoozed = useSnoozed();
+  // Address-book suggestions built from everyone you've seen mail from.
+  const contacts = useMemo(
+    () => Array.from(new Set(messages.map((m) => m.fromEmail).filter((e) => e.includes("@")))).slice(0, 300),
+    [messages],
+  );
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeInitial, setComposeInitial] = useState<ComposeInitial | undefined>();
   const [settingsOpen, setSettingsOpen] = useState(false);
