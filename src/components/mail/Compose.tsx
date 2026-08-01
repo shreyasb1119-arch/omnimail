@@ -1,57 +1,139 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Sparkles, Send, Wand2, Loader2 } from "lucide-react";
+import { Sparkles, Send, Wand2, Loader2, Paperclip, X, Save } from "lucide-react";
 import { toast } from "sonner";
-import { sendMessage } from "@/lib/gmail";
+import { sendMessage, createDraft, fileToOutgoing, formatBytes, type OutgoingAttachment } from "@/lib/gmail";
 import { aiWriteEmail, aiImproveTone, aiComplete } from "@/lib/ai";
+import { useSettings } from "@/lib/store";
 
 export interface ComposeInitial {
   to?: string;
   subject?: string;
   body?: string;
   threadId?: string;
+  cc?: string;
+  bcc?: string;
 }
 
 export function Compose({
   open,
   onOpenChange,
   initial,
+  contacts = [],
+  onSent,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   initial?: ComposeInitial;
+  contacts?: string[];
+  onSent?: () => void;
 }) {
+  const settings = useSettings();
   const [to, setTo] = useState("");
+  const [cc, setCc] = useState("");
+  const [bcc, setBcc] = useState("");
+  const [showCc, setShowCc] = useState(false);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [atts, setAtts] = useState<OutgoingAttachment[]>([]);
   const [sending, setSending] = useState(false);
   const [aiIntent, setAiIntent] = useState("");
   const [aiTone, setAiTone] = useState<"professional" | "casual" | "cold">("professional");
   const [aiBusy, setAiBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
       setTo(initial?.to || "");
+      setCc(initial?.cc || "");
+      setBcc(initial?.bcc || "");
+      setShowCc(!!(initial?.cc || initial?.bcc));
       setSubject(initial?.subject || "");
-      setBody(initial?.body || "");
+      const sig = settings.signature ? `\n\n--\n${settings.signature}` : "";
+      setBody((initial?.body || "") + sig);
+      setAtts([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initial]);
+
+  const suggestions = useMemo(() => {
+    const term = to.split(",").pop()?.trim().toLowerCase() || "";
+    if (term.length < 2) return [];
+    return contacts.filter((c) => c.toLowerCase().includes(term)).slice(0, 5);
+  }, [to, contacts]);
+
+  const payload = () => ({ to, cc: cc || undefined, bcc: bcc || undefined, subject, body, threadId: initial?.threadId, attachments: atts });
 
   const send = async () => {
     if (!to || !subject) return toast.error("Add a recipient and subject");
+    if (settings.confirmBeforeSend && !window.confirm(`Send this email to ${to}?`)) return;
+    const data = payload();
+    const delay = Math.max(0, settings.undoSendSeconds || 0);
+
+    if (delay > 0) {
+      let cancelled = false;
+      onOpenChange(false);
+      const timer = setTimeout(async () => {
+        if (cancelled) return;
+        try {
+          await sendMessage(data);
+          toast.success("Sent");
+          onSent?.();
+        } catch (e: any) {
+          toast.error(e.message || "Send failed");
+        }
+      }, delay * 1000);
+      toast(`Sending to ${data.to}…`, {
+        duration: delay * 1000,
+        action: {
+          label: "Undo",
+          onClick: () => {
+            cancelled = true;
+            clearTimeout(timer);
+            toast.info("Send undone — reopen compose to edit");
+          },
+        },
+      });
+      return;
+    }
+
     setSending(true);
     try {
-      await sendMessage({ to, subject, body, threadId: initial?.threadId });
+      await sendMessage(data);
       toast.success("Sent");
+      onSent?.();
       onOpenChange(false);
     } catch (e: any) {
       toast.error(e.message || "Send failed");
     } finally {
       setSending(false);
+    }
+  };
+
+  const saveDraft = async () => {
+    setSending(true);
+    try {
+      await createDraft(payload());
+      toast.success("Draft saved to Gmail");
+      onOpenChange(false);
+    } catch (e: any) {
+      toast.error(e.message || "Could not save draft");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const addFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    try {
+      const out = await Promise.all(Array.from(files).map(fileToOutgoing));
+      setAtts((a) => [...a, ...out]);
+    } catch {
+      toast.error("Could not attach file");
     }
   };
 
@@ -74,8 +156,7 @@ export function Compose({
     if (!body.trim()) return;
     setAiBusy(true);
     try {
-      const out = await aiImproveTone(body, tone);
-      setBody(out);
+      setBody(await aiImproveTone(body, tone));
     } catch (e: any) {
       toast.error(e.message || "AI failed");
     } finally {
@@ -104,7 +185,37 @@ export function Compose({
             <DialogTitle className="text-base font-semibold">New Message</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 p-6 pt-4">
-            <Input placeholder="To" value={to} onChange={(e) => setTo(e.target.value)} className="border-0 border-b border-border rounded-none px-0 focus-visible:ring-0" />
+            <div className="relative">
+              <div className="flex items-center gap-2">
+                <Input placeholder="To" value={to} onChange={(e) => setTo(e.target.value)} className="border-0 border-b border-border rounded-none px-0 focus-visible:ring-0" />
+                <button onClick={() => setShowCc((v) => !v)} className="shrink-0 text-xs text-muted-foreground hover:text-foreground">
+                  Cc/Bcc
+                </button>
+              </div>
+              {suggestions.length > 0 && (
+                <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-border/60 bg-popover shadow-xl">
+                  {suggestions.map((s) => (
+                    <button
+                      key={s}
+                      className="block w-full px-3 py-1.5 text-left text-xs hover:bg-accent"
+                      onClick={() => {
+                        const parts = to.split(",");
+                        parts[parts.length - 1] = ` ${s}`;
+                        setTo(parts.join(",").replace(/^\s+/, "") + ", ");
+                      }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {showCc && (
+              <div className="animate-drop grid gap-3 sm:grid-cols-2">
+                <Input placeholder="Cc" value={cc} onChange={(e) => setCc(e.target.value)} className="border-0 border-b border-border rounded-none px-0 focus-visible:ring-0" />
+                <Input placeholder="Bcc" value={bcc} onChange={(e) => setBcc(e.target.value)} className="border-0 border-b border-border rounded-none px-0 focus-visible:ring-0" />
+              </div>
+            )}
             <Input placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} className="border-0 border-b border-border rounded-none px-0 focus-visible:ring-0" />
             <Textarea
               placeholder="Write your message…"
@@ -113,6 +224,21 @@ export function Compose({
               rows={10}
               className="border-0 focus-visible:ring-0 resize-none px-0 leading-relaxed"
             />
+
+            {atts.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {atts.map((a, i) => (
+                  <span key={i} className="flex items-center gap-1.5 rounded-full border border-border/60 bg-card/50 px-3 py-1 text-xs">
+                    <Paperclip className="h-3 w-3" /> {a.filename}
+                    <span className="text-muted-foreground">{formatBytes(Math.round((a.data.length * 3) / 4))}</span>
+                    <button onClick={() => setAtts((p) => p.filter((_, j) => j !== i))} aria-label="Remove attachment">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
             <Tabs defaultValue="write" className="rounded-xl border border-border/60 bg-card/40 p-3">
               <TabsList className="bg-transparent">
                 <TabsTrigger value="write"><Sparkles className="mr-1.5 h-3.5 w-3.5" /> AI Writer</TabsTrigger>
@@ -154,8 +280,16 @@ export function Compose({
               </TabsContent>
             </Tabs>
           </div>
-          <div className="flex items-center justify-between border-t border-border/60 px-6 py-3">
-            <span className="text-xs text-muted-foreground">Omni Mail · AI-powered</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 px-6 py-3">
+            <div className="flex items-center gap-2">
+              <input ref={fileRef} type="file" multiple hidden onChange={(e) => addFiles(e.target.files)} />
+              <Button variant="ghost" size="sm" className="gap-1" onClick={() => fileRef.current?.click()}>
+                <Paperclip className="h-4 w-4" /> Attach
+              </Button>
+              <Button variant="ghost" size="sm" className="gap-1" onClick={saveDraft} disabled={sending}>
+                <Save className="h-4 w-4" /> Save draft
+              </Button>
+            </div>
             <div className="flex gap-2">
               <Button variant="ghost" onClick={() => onOpenChange(false)}>Discard</Button>
               <Button onClick={send} disabled={sending}>
