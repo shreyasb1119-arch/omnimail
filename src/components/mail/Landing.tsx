@@ -58,7 +58,7 @@ const AI_FEATURES = [
 const CORE_FEATURES = [
   { icon: Search, title: "Date-range search", body: "Type 10/26/25 for everything before that date, or 10/26/25-10/26/24 for the window between them." },
   { icon: Command, title: "Command palette", body: "⌘K for everything, with your own blur and transparency settings." },
-  { icon: Keyboard, title: "Keyboard-first", body: "J/K to move, C to compose, E to archive, S to star, # to trash, / to search." },
+  { icon: Keyboard, title: "Keyboard-first", body: "J/K to move, ⌘S to compose, E to archive, S to star, # to trash, / to search." },
   { icon: Folder, title: "Real folders", body: "Create and nest Gmail labels from the sidebar, or let the assistant file mail for you." },
   { icon: Trash2, title: "Empty Trash now", body: "Actually empty it. No 30-day wait, no digging through Gmail settings." },
   { icon: CheckCircle2, title: "Bulk everything", body: "Select all, archive, trash, mark read — across every message in view." },
