@@ -1467,7 +1467,19 @@ function App() {
                       <div className={`mag-text mt-0.5 truncate text-sm ${m.unread ? "text-foreground" : "text-muted-foreground"}`}>
                         {m.subject || "(no subject)"}
                       </div>
-                      <div className="truncate text-xs text-muted-foreground/80">{m.snippet}</div>
+                      {settings.previewLines > 0 && (
+                        <div
+                          className="overflow-hidden text-xs text-muted-foreground/80"
+                          style={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: settings.previewLines }}
+                        >
+                          {m.snippet}
+                        </div>
+                      )}
+                      {m.attachments.length > 0 && (
+                        <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Paperclip className="h-3 w-3" /> {m.attachments.length}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
