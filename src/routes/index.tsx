@@ -1394,17 +1394,13 @@ function App() {
                     <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => doSpam(Array.from(selected), folder !== "SPAM")}>
                       <ShieldAlert className="h-3.5 w-3.5" /> {folder === "SPAM" ? "Not spam" : "Spam"}
                     </Button>
-                    <select
+                    <GlassSelect
                       aria-label="Move selected to folder"
                       value=""
-                      onChange={(e) => { if (e.target.value) void doMoveToLabel(Array.from(selected), e.target.value); }}
-                      className="rounded-md border border-border/60 bg-card/50 px-2 py-1 text-[11px] text-muted-foreground outline-none hover:text-foreground"
-                    >
-                      <option value="">Move to…</option>
-                      {userLabels.map((l) => (
-                        <option key={l.id} value={l.id}>{l.name}</option>
-                      ))}
-                    </select>
+                      placeholder="Move to…"
+                      onValueChange={(v) => { if (v) void doMoveToLabel(Array.from(selected), v); }}
+                      options={userLabels.map((l) => ({ value: l.id, label: l.name }))}
+                    />
                     <Button size="sm" variant="ghost" className="h-7 gap-1 text-destructive" onClick={() => doTrash(Array.from(selected))}>
                       <Trash2 className="h-3.5 w-3.5" /> Trash
                     </Button>
