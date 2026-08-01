@@ -1464,7 +1464,7 @@ function App() {
       </div>
 
       <SettingsDrawer open={settingsOpen} onOpenChange={setSettingsOpen} />
-      <Compose open={composeOpen} onOpenChange={setComposeOpen} initial={composeInitial} />
+      <Compose open={composeOpen} onOpenChange={setComposeOpen} initial={composeInitial} contacts={contacts} onSent={() => void load()} />
       <CommandPalette
         open={cmdOpen}
         onOpenChange={setCmdOpen}
