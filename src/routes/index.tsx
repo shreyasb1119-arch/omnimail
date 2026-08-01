@@ -29,14 +29,6 @@ import {
   listLabels, createLabel, downloadAttachment, attachmentObjectUrl, type GmailLabel, type ParsedMessage,
 } from "@/lib/gmail";
 import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
-const LAYOUT_CONF: Record<string, { sidebar: string; list: string; row: string }> = {
-  comfortable: { sidebar: "w-64", list: "w-[420px]", row: "py-3" },
-  compact: { sidebar: "w-52", list: "w-[360px]", row: "py-1.5" },
-  focus: { sidebar: "hidden", list: "w-[440px]", row: "py-3" },
-  wide: { sidebar: "w-72", list: "w-[520px]", row: "py-3.5" },
-  stack: { sidebar: "w-64", list: "w-full", row: "py-3" },
-};
-
 import { useSession, useSettings, sessionStore, settingsStore, getAiLabels, setAiLabel, type AiLabel, type SortBy, type LayoutId } from "@/lib/store";
 import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief, aiSecurityCheck, aiSenderBrief, aiCleanupPlan, aiNaturalSearch, looksNaturalLanguage, aiReplyDraft, aiVipScan, aiInboxReport,
   aiCommitments, aiSpendScan, aiTravelBoard, aiDeadlineBoard, aiRelationshipPulse, aiSmartFolders,
@@ -55,6 +47,15 @@ import { Compose, type ComposeInitial } from "@/components/mail/Compose";
 import { CommandPalette, type Cmd } from "@/components/mail/CommandPalette";
 import { AiAssistant } from "@/components/mail/AiAssistant";
 import { Landing } from "@/components/mail/Landing";
+
+const LAYOUT_CONF: Record<string, { sidebar: string; list: string; row: string }> = {
+  comfortable: { sidebar: "w-64", list: "w-[420px]", row: "py-3" },
+  compact: { sidebar: "w-52", list: "w-[360px]", row: "py-1.5" },
+  focus: { sidebar: "hidden", list: "w-[440px]", row: "py-3" },
+  wide: { sidebar: "w-72", list: "w-[520px]", row: "py-3.5" },
+  stack: { sidebar: "w-64", list: "w-full", row: "py-3" },
+};
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
