@@ -159,6 +159,8 @@ function App() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [aiLabels, setAiLabels] = useState<Record<string, AiLabel>>({});
   const [userLabels, setUserLabels] = useState<GmailLabel[]>([]);
+  const [labelCounts, setLabelCounts] = useState<Record<string, number>>({});
+  const snoozed = useSnoozed();
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeInitial, setComposeInitial] = useState<ComposeInitial | undefined>();
   const [settingsOpen, setSettingsOpen] = useState(false);
