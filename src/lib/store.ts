@@ -138,6 +138,13 @@ const defaultSettings: Settings = {
   cmdBlur: 28,
   sortBy: "date",
   layout: "comfortable",
+  signature: "",
+  undoSendSeconds: 8,
+  autoAdvance: true,
+  confirmBeforeSend: false,
+  showUnreadCounts: true,
+  previewLines: 1,
+  sendAndArchive: false,
 };
 
 
