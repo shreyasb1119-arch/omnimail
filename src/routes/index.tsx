@@ -313,12 +313,23 @@ function App() {
     [messages],
   );
 
+  // After removing messages, jump to the next one instead of dumping you back in the list.
+  const advanceAfter = (ids: string[]) => {
+    if (!openId || !ids.includes(openId)) return;
+    if (!settings.autoAdvance) { setOpenId(null); return; }
+    const rest = viewMessages.filter((m) => !ids.includes(m.id));
+    const idx = viewMessages.findIndex((m) => m.id === openId);
+    const next = rest[Math.min(idx, rest.length - 1)];
+    setOpenId(next ? next.id : null);
+  };
+
   const doArchive = async (ids: string[]) => {
     if (!ids.length) return;
     try {
       await batchModify(ids, [], ["INBOX"]);
+      advanceAfter(ids);
       setMessages((p) => p.filter((m) => !ids.includes(m.id)));
-      setSelected(new Set()); setOpenId(null);
+      setSelected(new Set());
       toast.success(`Archived ${ids.length}`);
     } catch (e: any) { toast.error(e.message); }
   };
@@ -326,8 +337,9 @@ function App() {
     if (!ids.length) return;
     try {
       await Promise.all(ids.map((id) => trashMessage(id)));
+      advanceAfter(ids);
       setMessages((p) => p.filter((m) => !ids.includes(m.id)));
-      setSelected(new Set()); setOpenId(null);
+      setSelected(new Set());
       toast.success(`Moved to Trash: ${ids.length}`);
     } catch (e: any) { toast.error(e.message); }
   };
@@ -337,6 +349,95 @@ function App() {
       setMessages((p) => p.map((m) => (m.id === id ? { ...m, starred: star, labelIds: star ? [...m.labelIds, "STARRED"] : m.labelIds.filter((l) => l !== "STARRED") } : m)));
     } catch (e: any) { toast.error(e.message); }
   };
+
+  /* ---- Gmail parity actions ---- */
+
+  const doMarkRead = async (ids: string[], read: boolean) => {
+    if (!ids.length) return;
+    try {
+      await batchModify(ids, read ? [] : ["UNREAD"], read ? ["UNREAD"] : []);
+      setMessages((p) => p.map((m) => (ids.includes(m.id) ? { ...m, unread: !read } : m)));
+      setSelected(new Set());
+      toast.success(read ? `Marked ${ids.length} read` : `Marked ${ids.length} unread`);
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const doSpam = async (ids: string[], spam: boolean) => {
+    if (!ids.length) return;
+    try {
+      await markSpam(ids, spam);
+      advanceAfter(ids);
+      setMessages((p) => p.filter((m) => !ids.includes(m.id)));
+      setSelected(new Set());
+      toast.success(spam ? `Reported ${ids.length} as spam` : `Restored ${ids.length} to inbox`);
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const doImportant = async (ids: string[], important: boolean) => {
+    if (!ids.length) return;
+    try {
+      await markImportant(ids, important);
+      toast.success(important ? "Marked important" : "Removed importance");
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const doMute = async (ids: string[]) => {
+    if (!ids.length) return;
+    try {
+      await muteThread(ids);
+      advanceAfter(ids);
+      setMessages((p) => p.filter((m) => !ids.includes(m.id)));
+      toast.success("Conversation muted");
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const doMoveToLabel = async (ids: string[], labelId: string) => {
+    if (!ids.length) return;
+    try {
+      await batchModify(ids, [labelId], ["INBOX"]);
+      advanceAfter(ids);
+      setMessages((p) => p.filter((m) => !ids.includes(m.id)));
+      setSelected(new Set());
+      toast.success(`Moved ${ids.length}`);
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const doSnooze = async (ids: string[], wakeAt: number) => {
+    if (!ids.length) return;
+    try {
+      for (const id of ids) {
+        const m = messages.find((x) => x.id === id);
+        if (m) await snooze({ id: m.id, subject: m.subject, from: m.from }, wakeAt);
+      }
+      advanceAfter(ids);
+      setMessages((p) => p.filter((m) => !ids.includes(m.id)));
+      setSelected(new Set());
+      toast.success(`Snoozed until ${new Date(wakeAt).toLocaleString()}`);
+    } catch (e: any) { toast.error(e.message || "Snooze failed"); }
+  };
+
+  const openReply = (m: ParsedMessage, all: boolean) => {
+    const others = all
+      ? m.to.split(",").map((s) => s.trim()).filter((s) => s && !s.includes(session?.profile.email || "@@")).join(", ")
+      : "";
+    setComposeInitial({
+      to: m.fromEmail,
+      cc: others || undefined,
+      subject: m.subject.startsWith("Re:") ? m.subject : `Re: ${m.subject}`,
+      body: `\n\n\nOn ${new Date(m.date).toLocaleString()}, ${m.from} wrote:\n> ${m.bodyText.split("\n").join("\n> ")}`,
+      threadId: m.threadId,
+    });
+    setComposeOpen(true);
+  };
+
+  const openForward = (m: ParsedMessage) => {
+    setComposeInitial({
+      subject: m.subject.startsWith("Fwd:") ? m.subject : `Fwd: ${m.subject}`,
+      body: `\n\n---------- Forwarded message ----------\nFrom: ${m.from}\nDate: ${new Date(m.date).toLocaleString()}\nSubject: ${m.subject}\nTo: ${m.to}\n\n${m.bodyText}`,
+    });
+    setComposeOpen(true);
+  };
+
   const doPermanentDelete = async (ids: string[]) => {
     if (!ids.length) return;
     try {
