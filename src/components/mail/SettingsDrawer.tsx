@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
-import { settingsStore, useSettings, THEMES, WALLPAPERS, type Theme } from "@/lib/store";
+import { settingsStore, useSettings, THEMES, WALLPAPERS, LAYOUTS, type Theme, type LayoutId } from "@/lib/store";
 import { toast } from "sonner";
 import { signOut } from "@/lib/gauth";
 
@@ -97,6 +97,33 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
               </Button>
             )}
           </section>
+          <Separator />
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Layout</h3>
+            <p className="text-xs text-muted-foreground">Pick how the panes are arranged and how dense the inbox feels.</p>
+            <div className="space-y-2">
+              {LAYOUTS.map((l) => (
+                <button
+                  key={l.id}
+                  onClick={() => settingsStore.set({ layout: l.id as LayoutId })}
+                  className={`press flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition hover:border-primary ${
+                    s.layout === l.id ? "border-primary ring-2 ring-primary/40" : "border-border"
+                  }`}
+                >
+                  <div className="flex h-9 w-12 shrink-0 gap-0.5 rounded-md border border-border/60 bg-card/60 p-1">
+                    {l.id !== "focus" && <div className="w-1.5 rounded-[2px] bg-primary/50" />}
+                    <div className={`rounded-[2px] bg-foreground/25 ${l.id === "stack" ? "flex-1" : "w-3"}`} />
+                    {l.id !== "stack" && <div className="flex-1 rounded-[2px] bg-foreground/10" />}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium">{l.label}</div>
+                    <div className="text-[10px] leading-snug text-muted-foreground">{l.desc}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+
           <Separator />
 
           <section className="space-y-4">
