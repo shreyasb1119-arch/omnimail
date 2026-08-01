@@ -73,6 +73,57 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
           </section>
           <Separator />
           <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mail behaviour</h3>
+            <div className="space-y-2">
+              <Label>Signature</Label>
+              <textarea
+                value={s.signature}
+                onChange={(e) => settingsStore.set({ signature: e.target.value })}
+                rows={3}
+                placeholder={"Alex Rivera\nProduct, Omni"}
+                className="w-full resize-none rounded-lg border border-border/60 bg-card/40 p-2 text-sm outline-none focus:border-primary"
+              />
+              <p className="text-xs text-muted-foreground">Appended to every new message you compose.</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Undo Send window — {s.undoSendSeconds}s</Label>
+              <Slider
+                value={[s.undoSendSeconds]}
+                min={0}
+                max={30}
+                step={1}
+                onValueChange={([v]) => settingsStore.set({ undoSendSeconds: v })}
+              />
+              <p className="text-xs text-muted-foreground">Set to 0 to send immediately.</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Preview lines in the list</Label>
+              <Slider
+                value={[s.previewLines]}
+                min={0}
+                max={3}
+                step={1}
+                onValueChange={([v]) => settingsStore.set({ previewLines: v })}
+              />
+            </div>
+            {([
+              ["autoAdvance", "Auto-advance to the next email after archive/delete"],
+              ["confirmBeforeSend", "Ask me to confirm before sending"],
+              ["showUnreadCounts", "Show unread counts in the sidebar"],
+            ] as const).map(([key, label]) => (
+              <label key={key} className="flex cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={!!s[key]}
+                  onChange={(e) => settingsStore.set({ [key]: e.target.checked } as any)}
+                  className="h-4 w-4 accent-[hsl(var(--primary))]"
+                />
+                {label}
+              </label>
+            ))}
+          </section>
+          <Separator />
+          <section className="space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Avatar</h3>
             <div className="flex items-center gap-3">
               <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full border border-border/60 bg-primary/15 text-sm font-semibold text-primary">
