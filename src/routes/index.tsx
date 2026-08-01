@@ -1346,21 +1346,22 @@ function App() {
                 onCheckedChange={(v) => setSelected(v ? new Set(messages.map((m) => m.id)) : new Set())}
               />
               <span className="text-muted-foreground">{selected.size ? `${selected.size} selected` : `${messages.length} messages`}</span>
-              <select
+              <GlassSelect
                 aria-label="Sort messages"
+                className="ml-2"
                 value={settings.sortBy}
-                onChange={(e) => settingsStore.set({ sortBy: e.target.value as SortBy })}
-                className="ml-2 rounded-md border border-border/60 bg-card/50 px-2 py-1 text-[11px] text-muted-foreground outline-none hover:text-foreground"
-              >
-                <option value="date">Newest first</option>
-                <option value="sender">Sender A–Z</option>
-                <option value="unread">Unread first</option>
-              </select>
-              <select
+                onValueChange={(v) => settingsStore.set({ sortBy: v as SortBy })}
+                options={[
+                  { value: "date", label: "Newest first" },
+                  { value: "sender", label: "Sender A–Z" },
+                  { value: "unread", label: "Unread first" },
+                ]}
+              />
+              <GlassSelect
                 aria-label="Select messages"
                 value=""
-                onChange={(e) => {
-                  const v = e.target.value;
+                placeholder="Select…"
+                onValueChange={(v) => {
                   const pick = (fn: (m: ParsedMessage) => boolean) => setSelected(new Set(viewMessages.filter(fn).map((m) => m.id)));
                   if (v === "all") pick(() => true);
                   else if (v === "none") setSelected(new Set());
@@ -1369,16 +1370,15 @@ function App() {
                   else if (v === "starred") pick((m) => m.starred);
                   else if (v === "attach") pick((m) => m.attachments.length > 0);
                 }}
-                className="rounded-md border border-border/60 bg-card/50 px-2 py-1 text-[11px] text-muted-foreground outline-none hover:text-foreground"
-              >
-                <option value="">Select…</option>
-                <option value="all">All</option>
-                <option value="none">None</option>
-                <option value="read">Read</option>
-                <option value="unread">Unread</option>
-                <option value="starred">Starred</option>
-                <option value="attach">With attachments</option>
-              </select>
+                options={[
+                  { value: "all", label: "All" },
+                  { value: "none", label: "None" },
+                  { value: "read", label: "Read" },
+                  { value: "unread", label: "Unread" },
+                  { value: "starred", label: "Starred" },
+                  { value: "attach", label: "With attachments" },
+                ]}
+              />
               <div className="ml-auto flex items-center gap-1">
                 {selected.size > 0 && (
                   <>
