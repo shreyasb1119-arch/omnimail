@@ -1501,28 +1501,20 @@ function App() {
                   <Button size="sm" variant="ghost" onClick={() => window.print()} title="Print"><Printer className="h-4 w-4" /></Button>
                   <Button size="sm" variant="ghost" onClick={() => doImportant([opened.id], !opened.labelIds.includes("IMPORTANT"))} title="Toggle important"><Flag className="h-4 w-4" /></Button>
                   <Button size="sm" variant="ghost" onClick={() => doMute([opened.id])} title="Mute conversation"><VolumeX className="h-4 w-4" /></Button>
-                  <select
+                  <GlassSelect
                     aria-label="Snooze this email"
                     value=""
-                    onChange={(e) => { if (e.target.value) void doSnooze([opened.id], Number(e.target.value)); }}
-                    className="rounded-md border border-border/60 bg-card/50 px-2 py-1 text-[11px] text-muted-foreground outline-none hover:text-foreground"
-                  >
-                    <option value="">Snooze…</option>
-                    {SNOOZE_PRESETS.map((p) => (
-                      <option key={p.label} value={p.ms()}>{p.label}</option>
-                    ))}
-                  </select>
-                  <select
+                    placeholder="Snooze…"
+                    onValueChange={(v) => { if (v) void doSnooze([opened.id], Number(v)); }}
+                    options={SNOOZE_PRESETS.map((p) => ({ value: String(p.ms()), label: p.label }))}
+                  />
+                  <GlassSelect
                     aria-label="Move to folder"
                     value=""
-                    onChange={(e) => { if (e.target.value) void doMoveToLabel([opened.id], e.target.value); }}
-                    className="rounded-md border border-border/60 bg-card/50 px-2 py-1 text-[11px] text-muted-foreground outline-none hover:text-foreground"
-                  >
-                    <option value="">Move to…</option>
-                    {userLabels.map((l) => (
-                      <option key={l.id} value={l.id}>{l.name}</option>
-                    ))}
-                  </select>
+                    placeholder="Move to…"
+                    onValueChange={(v) => { if (v) void doMoveToLabel([opened.id], v); }}
+                    options={userLabels.map((l) => ({ value: l.id, label: l.name }))}
+                  />
                   {folder === "TRASH" && (
                     <Button size="sm" variant="destructive" onClick={() => doPermanentDelete([opened.id])}>Delete forever</Button>
                   )}
