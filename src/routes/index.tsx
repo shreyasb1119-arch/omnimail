@@ -29,7 +29,7 @@ import {
   listLabels, createLabel, downloadAttachment, attachmentObjectUrl, type GmailLabel, type ParsedMessage,
 } from "@/lib/gmail";
 import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
-import { useSession, useSettings, sessionStore, settingsStore, getAiLabels, setAiLabel, type AiLabel, type SortBy } from "@/lib/store";
+import { useSession, useSettings, sessionStore, settingsStore, getAiLabels, setAiLabel, type AiLabel, type SortBy, type LayoutId } from "@/lib/store";
 import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief, aiSecurityCheck, aiSenderBrief, aiCleanupPlan, aiNaturalSearch, looksNaturalLanguage, aiReplyDraft, aiVipScan, aiInboxReport,
   aiCommitments, aiSpendScan, aiTravelBoard, aiDeadlineBoard, aiRelationshipPulse, aiSmartFolders,
   aiRuleBuilder, aiDailyPlan, aiDuplicateScan, aiThreadTimeline, aiExplainSimply, aiToneVariants,
@@ -179,6 +179,11 @@ function App() {
   const [queueOpen, setQueueOpen] = useState(false);
   const scheduled = useScheduled();
   const listRef = useRef<HTMLDivElement>(null);
+  const islandRef = useRef<HTMLDivElement>(null);
+  const islandCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const layout = (settings.layout || "comfortable") as LayoutId;
+  const L = LAYOUT_CONF[layout];
 
 
   useEffect(() => {
@@ -474,11 +479,16 @@ function App() {
       const t = e.target as HTMLElement;
       const inField = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setCmdOpen(true); return; }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        setComposeInitial(undefined);
+        setComposeOpen(true);
+        return;
+      }
       if (inField) return;
       const cur = viewMessages[cursorIndex];
       if (e.key === "j") { e.preventDefault(); setCursorIndex((i) => Math.min(viewMessages.length - 1, i + 1)); }
       else if (e.key === "k") { e.preventDefault(); setCursorIndex((i) => Math.max(0, i - 1)); }
-      else if (e.key === "c") { e.preventDefault(); setComposeInitial(undefined); setComposeOpen(true); }
       else if (e.key === "/") { e.preventDefault(); setIslandHover(true); setSearchFocused(true); setSearchOpen(true); setTimeout(() => document.getElementById("search-input")?.focus(), 60); }
       else if (e.key === "Enter" && cur) { e.preventDefault(); openMessage(cur.id); }
       else if (e.key === "e" && cur) { e.preventDefault(); doArchive([cur.id]); }
@@ -844,7 +854,7 @@ function App() {
 
 
   const commands: Cmd[] = useMemo(() => [
-    { id: "compose", label: "Compose", icon: <PenSquare className="h-4 w-4" />, shortcut: "C", action: () => { setComposeInitial(undefined); setComposeOpen(true); }, group: "Actions" },
+    { id: "compose", label: "Compose", icon: <PenSquare className="h-4 w-4" />, shortcut: "⌘S", action: () => { setComposeInitial(undefined); setComposeOpen(true); }, group: "Actions" },
     { id: "refresh", label: "Refresh", icon: <RefreshCw className="h-4 w-4" />, shortcut: "R", action: load, group: "Actions" },
     { id: "assistant", label: "Open AI Assistant", icon: <MessageSquare className="h-4 w-4" />, action: () => setAssistantOpen(true), group: "AI" },
     { id: "triage", label: "AI Smart Triage", icon: <Sparkles className="h-4 w-4" />, action: runTriage, group: "AI" },
@@ -876,14 +886,13 @@ function App() {
       <Toaster position="top-right" richColors />
       <div className="relative flex h-screen w-screen flex-col overflow-hidden p-3 text-foreground">
         {/* Dynamic island — hidden until the pointer reaches the top edge */}
-        <div className="island-zone" onMouseEnter={() => setIslandHover(true)} />
         <div className={`island-nub ${islandShown ? "is-hidden" : ""}`} aria-hidden="true" />
         <div
+          ref={islandRef}
           className={`island-wrap ${islandShown ? "is-open" : ""}`}
-          onMouseEnter={() => setIslandHover(true)}
-          onMouseLeave={() => {
-            setIslandHover(false);
-            if (!searchFocused) setSearchOpen(false);
+          onPointerEnter={() => {
+            if (islandCloseTimer.current) clearTimeout(islandCloseTimer.current);
+            setIslandHover(true);
           }}
         >
           <div
@@ -950,7 +959,8 @@ function App() {
 
 
           {/* Sidebar */}
-          <aside className="glass no-scrollbar flex w-64 shrink-0 flex-col overflow-y-auto rounded-2xl px-3 py-4 shadow-xl">
+          {L.sidebar !== "hidden" && (
+          <aside className={`glass no-scrollbar flex shrink-0 flex-col overflow-y-auto rounded-2xl px-3 py-4 shadow-xl ${L.sidebar}`}>
             <div className="mb-5 flex items-center gap-2.5 px-1">
               <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground shadow-md">
                 {avatarSrc ? (
@@ -1102,14 +1112,17 @@ function App() {
 
 
             <div className="mt-auto pt-2 text-center text-[10px] text-muted-foreground/70">
-              Press <span className="rounded border border-border px-1 font-mono">⌘K</span> for everything, including Settings
+              Press <span className="rounded border border-border px-1 font-mono">⌘K</span> for everything ·{" "}
+              <span className="rounded border border-border px-1 font-mono">⌘S</span> to compose
             </div>
           </aside>
+          )}
 
           {/* List pane */}
+          {!(layout === "stack" && opened) && (
           <section
             className={`glass-inbox flex flex-col overflow-hidden rounded-2xl shadow-xl transition-all duration-300 ${
-              opened ? "w-[420px] shrink-0" : "flex-1"
+              opened ? `${L.list} shrink-0` : "flex-1"
             }`}
           >
 
@@ -1157,7 +1170,7 @@ function App() {
               </div>
             </div>
 
-            <div ref={listRef} className="no-scrollbar flex-1 overflow-y-auto">
+            <div ref={listRef} className="no-scrollbar flex-1 overflow-y-auto pt-1.5">
               {loading && !messages.length && (
                 <div className="p-8 text-center text-sm text-muted-foreground">
                   <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" /> Loading…
@@ -1174,8 +1187,8 @@ function App() {
                   <div
                     key={m.id}
                     onClick={() => { setCursorIndex(i); openMessage(m.id); }}
-                    className={`animate-in-up hover-mag group flex cursor-pointer gap-2 border-b border-border/40 px-3 py-3 ${
-                      isOpen ? "bg-accent/60" : isCursor ? "bg-accent/30" : "hover:bg-accent/20"
+                    className={`animate-in-up hover-mag group mx-2 mb-1.5 flex cursor-pointer gap-2 rounded-xl border border-border/40 px-3 ${L.row} ${
+                      isOpen ? "bg-accent/60" : isCursor ? "bg-accent/30" : "bg-card/20 hover:bg-accent/20"
                     }`}
                   >
                     <div className="flex flex-col items-center gap-2 pt-0.5">
@@ -1212,6 +1225,7 @@ function App() {
               })}
             </div>
           </section>
+          )}
 
           {/* Reader — only exists when a message is opened */}
           {opened && (
