@@ -244,11 +244,21 @@ function App() {
     if (!session) return;
     try {
       const all = await listLabels();
-      setUserLabels(all.filter((l) => l.type === "user"));
+      setUserLabels(all.filter((l) => l.type === "user" && l.name !== SNOOZE_LABEL));
+      const counts: Record<string, number> = {};
+      for (const l of all) if (l.messagesUnread) counts[l.id] = l.messagesUnread;
+      setLabelCounts(counts);
     } catch {}
   }, [session]);
 
   useEffect(() => { refreshLabels(); }, [refreshLabels]);
+
+  // Bring snoozed mail back to the inbox when its timer is up.
+  useEffect(() => {
+    if (!session) return;
+    return startSnoozeWatcher((i) => toast.info(`Snoozed email is back: ${i.subject || "(no subject)"}`));
+  }, [session]);
+
 
   const load = useCallback(async () => {
     if (!session) return;
