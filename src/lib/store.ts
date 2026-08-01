@@ -83,6 +83,7 @@ export interface Settings {
   cmdOpacity: number;
   cmdBlur: number;
   sortBy: SortBy;
+  layout: LayoutId;
 }
 
 export type SortBy = "date" | "sender" | "unread";
@@ -128,6 +129,7 @@ const defaultSettings: Settings = {
   cmdOpacity: 70,
   cmdBlur: 28,
   sortBy: "date",
+  layout: "comfortable",
 };
 
 
