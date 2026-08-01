@@ -27,8 +27,10 @@ import {
 import {
   batchDelete, batchModify, deleteMessage, emptyTrash,
   listMessages, batchGetMessages, modifyMessage, trashMessage,
-  listLabels, createLabel, downloadAttachment, attachmentObjectUrl, type GmailLabel, type ParsedMessage,
+  listLabels, createLabel, downloadAttachment, attachmentObjectUrl, markSpam, markImportant, muteThread,
+  type GmailLabel, type ParsedMessage,
 } from "@/lib/gmail";
+import { snooze, SNOOZE_PRESETS, SNOOZE_LABEL, useSnoozed, startSnoozeWatcher } from "@/lib/snooze";
 import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
 import { useSession, useSettings, sessionStore, settingsStore, getAiLabels, setAiLabel, type AiLabel, type SortBy, type LayoutId } from "@/lib/store";
 import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief, aiSecurityCheck, aiSenderBrief, aiCleanupPlan, aiNaturalSearch, looksNaturalLanguage, aiReplyDraft, aiVipScan, aiInboxReport,
