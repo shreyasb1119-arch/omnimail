@@ -87,6 +87,17 @@ export interface Settings {
 
 export type SortBy = "date" | "sender" | "unread";
 
+export type LayoutId = "comfortable" | "compact" | "focus" | "wide" | "stack";
+
+export const LAYOUTS: { id: LayoutId; label: string; desc: string }[] = [
+  { id: "comfortable", label: "Comfortable", desc: "Balanced three-pane layout with roomy rows." },
+  { id: "compact", label: "Compact", desc: "Denser rows and a slimmer sidebar — more mail per screen." },
+  { id: "focus", label: "Focus", desc: "Sidebar hidden. Just the list and the message." },
+  { id: "wide", label: "Wide reader", desc: "Bigger sidebar and a wider list column." },
+  { id: "stack", label: "Stacked", desc: "Opening a message takes over the full width." },
+];
+
+
 export interface AuthSession {
   accessToken: string;
   expiresAt: number;
