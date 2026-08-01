@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { GlassSelect } from "@/components/ui/glass-select";
 import { Input } from "@/components/ui/input";
 import {
   Inbox, Star, Send, Trash2, PenSquare, Sparkles, Settings, Archive,
