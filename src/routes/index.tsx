@@ -11,6 +11,7 @@ import {
   Reply, Loader2, Command as CmdIcon, Info, Folder, Plus, MessageSquare, X, Newspaper, ListChecks,
   Radar, BellOff, Clock, ChevronDown, Gauge, Languages, CalendarClock, Paperclip, Download,
   ShieldCheck, UserSearch, Sparkle, Wand2, Crown, BarChart3,
+  MailOpen, Printer, Forward, ReplyAll, VolumeX, Flag,
 
 } from "lucide-react";
 import {
@@ -26,8 +27,10 @@ import {
 import {
   batchDelete, batchModify, deleteMessage, emptyTrash,
   listMessages, batchGetMessages, modifyMessage, trashMessage,
-  listLabels, createLabel, downloadAttachment, attachmentObjectUrl, type GmailLabel, type ParsedMessage,
+  listLabels, createLabel, downloadAttachment, attachmentObjectUrl, markSpam, markImportant, muteThread,
+  type GmailLabel, type ParsedMessage,
 } from "@/lib/gmail";
+import { snooze, SNOOZE_PRESETS, SNOOZE_LABEL, useSnoozed, startSnoozeWatcher } from "@/lib/snooze";
 import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
 import { useSession, useSettings, sessionStore, settingsStore, getAiLabels, setAiLabel, type AiLabel, type SortBy, type LayoutId } from "@/lib/store";
 import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief, aiSecurityCheck, aiSenderBrief, aiCleanupPlan, aiNaturalSearch, looksNaturalLanguage, aiReplyDraft, aiVipScan, aiInboxReport,
@@ -156,6 +159,13 @@ function App() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [aiLabels, setAiLabels] = useState<Record<string, AiLabel>>({});
   const [userLabels, setUserLabels] = useState<GmailLabel[]>([]);
+  const [labelCounts, setLabelCounts] = useState<Record<string, number>>({});
+  const snoozed = useSnoozed();
+  // Address-book suggestions built from everyone you've seen mail from.
+  const contacts = useMemo(
+    () => Array.from(new Set(messages.map((m) => m.fromEmail).filter((e) => e.includes("@")))).slice(0, 300),
+    [messages],
+  );
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeInitial, setComposeInitial] = useState<ComposeInitial | undefined>();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -241,11 +251,21 @@ function App() {
     if (!session) return;
     try {
       const all = await listLabels();
-      setUserLabels(all.filter((l) => l.type === "user"));
+      setUserLabels(all.filter((l) => l.type === "user" && l.name !== SNOOZE_LABEL));
+      const counts: Record<string, number> = {};
+      for (const l of all) if (l.messagesUnread) counts[l.id] = l.messagesUnread;
+      setLabelCounts(counts);
     } catch {}
   }, [session]);
 
   useEffect(() => { refreshLabels(); }, [refreshLabels]);
+
+  // Bring snoozed mail back to the inbox when its timer is up.
+  useEffect(() => {
+    if (!session) return;
+    return startSnoozeWatcher((i) => toast.info(`Snoozed email is back: ${i.subject || "(no subject)"}`));
+  }, [session]);
+
 
   const load = useCallback(async () => {
     if (!session) return;
@@ -313,12 +333,23 @@ function App() {
     [messages],
   );
 
+  // After removing messages, jump to the next one instead of dumping you back in the list.
+  const advanceAfter = (ids: string[]) => {
+    if (!openId || !ids.includes(openId)) return;
+    if (!settings.autoAdvance) { setOpenId(null); return; }
+    const rest = viewMessages.filter((m) => !ids.includes(m.id));
+    const idx = viewMessages.findIndex((m) => m.id === openId);
+    const next = rest[Math.min(idx, rest.length - 1)];
+    setOpenId(next ? next.id : null);
+  };
+
   const doArchive = async (ids: string[]) => {
     if (!ids.length) return;
     try {
       await batchModify(ids, [], ["INBOX"]);
+      advanceAfter(ids);
       setMessages((p) => p.filter((m) => !ids.includes(m.id)));
-      setSelected(new Set()); setOpenId(null);
+      setSelected(new Set());
       toast.success(`Archived ${ids.length}`);
     } catch (e: any) { toast.error(e.message); }
   };
@@ -326,8 +357,9 @@ function App() {
     if (!ids.length) return;
     try {
       await Promise.all(ids.map((id) => trashMessage(id)));
+      advanceAfter(ids);
       setMessages((p) => p.filter((m) => !ids.includes(m.id)));
-      setSelected(new Set()); setOpenId(null);
+      setSelected(new Set());
       toast.success(`Moved to Trash: ${ids.length}`);
     } catch (e: any) { toast.error(e.message); }
   };
@@ -337,6 +369,95 @@ function App() {
       setMessages((p) => p.map((m) => (m.id === id ? { ...m, starred: star, labelIds: star ? [...m.labelIds, "STARRED"] : m.labelIds.filter((l) => l !== "STARRED") } : m)));
     } catch (e: any) { toast.error(e.message); }
   };
+
+  /* ---- Gmail parity actions ---- */
+
+  const doMarkRead = async (ids: string[], read: boolean) => {
+    if (!ids.length) return;
+    try {
+      await batchModify(ids, read ? [] : ["UNREAD"], read ? ["UNREAD"] : []);
+      setMessages((p) => p.map((m) => (ids.includes(m.id) ? { ...m, unread: !read } : m)));
+      setSelected(new Set());
+      toast.success(read ? `Marked ${ids.length} read` : `Marked ${ids.length} unread`);
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const doSpam = async (ids: string[], spam: boolean) => {
+    if (!ids.length) return;
+    try {
+      await markSpam(ids, spam);
+      advanceAfter(ids);
+      setMessages((p) => p.filter((m) => !ids.includes(m.id)));
+      setSelected(new Set());
+      toast.success(spam ? `Reported ${ids.length} as spam` : `Restored ${ids.length} to inbox`);
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const doImportant = async (ids: string[], important: boolean) => {
+    if (!ids.length) return;
+    try {
+      await markImportant(ids, important);
+      toast.success(important ? "Marked important" : "Removed importance");
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const doMute = async (ids: string[]) => {
+    if (!ids.length) return;
+    try {
+      await muteThread(ids);
+      advanceAfter(ids);
+      setMessages((p) => p.filter((m) => !ids.includes(m.id)));
+      toast.success("Conversation muted");
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const doMoveToLabel = async (ids: string[], labelId: string) => {
+    if (!ids.length) return;
+    try {
+      await batchModify(ids, [labelId], ["INBOX"]);
+      advanceAfter(ids);
+      setMessages((p) => p.filter((m) => !ids.includes(m.id)));
+      setSelected(new Set());
+      toast.success(`Moved ${ids.length}`);
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const doSnooze = async (ids: string[], wakeAt: number) => {
+    if (!ids.length) return;
+    try {
+      for (const id of ids) {
+        const m = messages.find((x) => x.id === id);
+        if (m) await snooze({ id: m.id, subject: m.subject, from: m.from }, wakeAt);
+      }
+      advanceAfter(ids);
+      setMessages((p) => p.filter((m) => !ids.includes(m.id)));
+      setSelected(new Set());
+      toast.success(`Snoozed until ${new Date(wakeAt).toLocaleString()}`);
+    } catch (e: any) { toast.error(e.message || "Snooze failed"); }
+  };
+
+  const openReply = (m: ParsedMessage, all: boolean) => {
+    const others = all
+      ? m.to.split(",").map((s) => s.trim()).filter((s) => s && !s.includes(session?.profile.email || "@@")).join(", ")
+      : "";
+    setComposeInitial({
+      to: m.fromEmail,
+      cc: others || undefined,
+      subject: m.subject.startsWith("Re:") ? m.subject : `Re: ${m.subject}`,
+      body: `\n\n\nOn ${new Date(m.date).toLocaleString()}, ${m.from} wrote:\n> ${m.bodyText.split("\n").join("\n> ")}`,
+      threadId: m.threadId,
+    });
+    setComposeOpen(true);
+  };
+
+  const openForward = (m: ParsedMessage) => {
+    setComposeInitial({
+      subject: m.subject.startsWith("Fwd:") ? m.subject : `Fwd: ${m.subject}`,
+      body: `\n\n---------- Forwarded message ----------\nFrom: ${m.from}\nDate: ${new Date(m.date).toLocaleString()}\nSubject: ${m.subject}\nTo: ${m.to}\n\n${m.bodyText}`,
+    });
+    setComposeOpen(true);
+  };
+
   const doPermanentDelete = async (ids: string[]) => {
     if (!ids.length) return;
     try {
@@ -547,6 +668,20 @@ function App() {
       else if (e.key === "e" && cur) { e.preventDefault(); doArchive([cur.id]); }
       else if (e.key === "#" && cur) { e.preventDefault(); doTrash([cur.id]); }
       else if (e.key === "s" && cur) { e.preventDefault(); doStar(cur.id, !cur.starred); }
+      else if (e.key === "u") { e.preventDefault(); setOpenId(null); }
+      else if (e.key === "U" && cur) { e.preventDefault(); doMarkRead([cur.id], false); }
+      else if (e.key === "I" && cur) { e.preventDefault(); doMarkRead([cur.id], true); }
+      else if (e.key === "!" && cur) { e.preventDefault(); doSpam([cur.id], true); }
+      else if (e.key === "b" && cur) { e.preventDefault(); void doSnooze([cur.id], SNOOZE_PRESETS[2].ms()); }
+      else if (e.key === "r" && cur) { e.preventDefault(); openReply(cur, false); }
+      else if (e.key === "a" && cur) { e.preventDefault(); openReply(cur, true); }
+      else if (e.key === "f" && cur) { e.preventDefault(); openForward(cur); }
+      else if (e.key === "p" && cur) { e.preventDefault(); window.print(); }
+      else if (e.key === "x" && cur) {
+        e.preventDefault();
+        setSelected((prev) => { const n = new Set(prev); n.has(cur.id) ? n.delete(cur.id) : n.add(cur.id); return n; });
+      }
+
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
@@ -1046,8 +1181,25 @@ function App() {
                   }`}
                 >
                   <f.icon className="h-4 w-4" /> <span className="mag-text">{f.label}</span>
+                  {settings.showUnreadCounts && !!labelCounts[f.id] && (
+                    <span className="ml-auto rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold text-primary">
+                      {labelCounts[f.id]}
+                    </span>
+                  )}
                 </button>
               ))}
+              <button
+                onClick={() => { setFolder("INBOX"); setQuery(""); setActiveQuery(`label:${SNOOZE_LABEL}`); }}
+                className={`hover-mag flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm ${
+                  activeQuery.includes(SNOOZE_LABEL) ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                }`}
+              >
+                <Clock className="h-4 w-4" /> <span className="mag-text">Snoozed</span>
+                {snoozed.length > 0 && (
+                  <span className="ml-auto rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold text-primary">{snoozed.length}</span>
+                )}
+              </button>
+
             </nav>
 
             {/* Folders (user labels) */}
@@ -1204,12 +1356,55 @@ function App() {
                 <option value="sender">Sender A–Z</option>
                 <option value="unread">Unread first</option>
               </select>
+              <select
+                aria-label="Select messages"
+                value=""
+                onChange={(e) => {
+                  const v = e.target.value;
+                  const pick = (fn: (m: ParsedMessage) => boolean) => setSelected(new Set(viewMessages.filter(fn).map((m) => m.id)));
+                  if (v === "all") pick(() => true);
+                  else if (v === "none") setSelected(new Set());
+                  else if (v === "read") pick((m) => !m.unread);
+                  else if (v === "unread") pick((m) => m.unread);
+                  else if (v === "starred") pick((m) => m.starred);
+                  else if (v === "attach") pick((m) => m.attachments.length > 0);
+                }}
+                className="rounded-md border border-border/60 bg-card/50 px-2 py-1 text-[11px] text-muted-foreground outline-none hover:text-foreground"
+              >
+                <option value="">Select…</option>
+                <option value="all">All</option>
+                <option value="none">None</option>
+                <option value="read">Read</option>
+                <option value="unread">Unread</option>
+                <option value="starred">Starred</option>
+                <option value="attach">With attachments</option>
+              </select>
               <div className="ml-auto flex items-center gap-1">
                 {selected.size > 0 && (
                   <>
                     <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => doArchive(Array.from(selected))}>
                       <Archive className="h-3.5 w-3.5" /> Archive
                     </Button>
+                    <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => doMarkRead(Array.from(selected), true)}>
+                      <MailOpen className="h-3.5 w-3.5" /> Read
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => doMarkRead(Array.from(selected), false)}>
+                      Unread
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => doSpam(Array.from(selected), folder !== "SPAM")}>
+                      <ShieldAlert className="h-3.5 w-3.5" /> {folder === "SPAM" ? "Not spam" : "Spam"}
+                    </Button>
+                    <select
+                      aria-label="Move selected to folder"
+                      value=""
+                      onChange={(e) => { if (e.target.value) void doMoveToLabel(Array.from(selected), e.target.value); }}
+                      className="rounded-md border border-border/60 bg-card/50 px-2 py-1 text-[11px] text-muted-foreground outline-none hover:text-foreground"
+                    >
+                      <option value="">Move to…</option>
+                      {userLabels.map((l) => (
+                        <option key={l.id} value={l.id}>{l.name}</option>
+                      ))}
+                    </select>
                     <Button size="sm" variant="ghost" className="h-7 gap-1 text-destructive" onClick={() => doTrash(Array.from(selected))}>
                       <Trash2 className="h-3.5 w-3.5" /> Trash
                     </Button>
@@ -1221,6 +1416,7 @@ function App() {
                   </Button>
                 )}
               </div>
+
             </div>
 
             <div ref={listRef} className="no-scrollbar flex-1 overflow-y-auto pt-1.5">
@@ -1271,7 +1467,19 @@ function App() {
                       <div className={`mag-text mt-0.5 truncate text-sm ${m.unread ? "text-foreground" : "text-muted-foreground"}`}>
                         {m.subject || "(no subject)"}
                       </div>
-                      <div className="truncate text-xs text-muted-foreground/80">{m.snippet}</div>
+                      {settings.previewLines > 0 && (
+                        <div
+                          className="overflow-hidden text-xs text-muted-foreground/80"
+                          style={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: settings.previewLines }}
+                        >
+                          {m.snippet}
+                        </div>
+                      )}
+                      {m.attachments.length > 0 && (
+                        <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Paperclip className="h-3 w-3" /> {m.attachments.length}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -1288,26 +1496,47 @@ function App() {
                   <Button size="sm" variant="ghost" onClick={() => setOpenId(null)} aria-label="Back to message list"><ArrowLeft className="h-4 w-4" /></Button>
                   <Button size="sm" variant="ghost" onClick={() => doArchive([opened.id])}><Archive className="h-4 w-4" /> Archive</Button>
                   <Button size="sm" variant="ghost" className="text-destructive" onClick={() => doTrash([opened.id])}><Trash2 className="h-4 w-4" /> Trash</Button>
+                  <Button size="sm" variant="ghost" onClick={() => doMarkRead([opened.id], false)} title="Mark as unread (shift+U)"><MailOpen className="h-4 w-4" /> Unread</Button>
+                  <Button size="sm" variant="ghost" onClick={() => doSpam([opened.id], folder !== "SPAM")}><ShieldAlert className="h-4 w-4" /> {folder === "SPAM" ? "Not spam" : "Spam"}</Button>
+                  <Button size="sm" variant="ghost" onClick={() => window.print()} title="Print"><Printer className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => doImportant([opened.id], !opened.labelIds.includes("IMPORTANT"))} title="Toggle important"><Flag className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => doMute([opened.id])} title="Mute conversation"><VolumeX className="h-4 w-4" /></Button>
+                  <select
+                    aria-label="Snooze this email"
+                    value=""
+                    onChange={(e) => { if (e.target.value) void doSnooze([opened.id], Number(e.target.value)); }}
+                    className="rounded-md border border-border/60 bg-card/50 px-2 py-1 text-[11px] text-muted-foreground outline-none hover:text-foreground"
+                  >
+                    <option value="">Snooze…</option>
+                    {SNOOZE_PRESETS.map((p) => (
+                      <option key={p.label} value={p.ms()}>{p.label}</option>
+                    ))}
+                  </select>
+                  <select
+                    aria-label="Move to folder"
+                    value=""
+                    onChange={(e) => { if (e.target.value) void doMoveToLabel([opened.id], e.target.value); }}
+                    className="rounded-md border border-border/60 bg-card/50 px-2 py-1 text-[11px] text-muted-foreground outline-none hover:text-foreground"
+                  >
+                    <option value="">Move to…</option>
+                    {userLabels.map((l) => (
+                      <option key={l.id} value={l.id}>{l.name}</option>
+                    ))}
+                  </select>
                   {folder === "TRASH" && (
                     <Button size="sm" variant="destructive" onClick={() => doPermanentDelete([opened.id])}>Delete forever</Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="ml-auto gap-1"
-                    onClick={() => {
-                      setComposeInitial({
-                        to: opened.fromEmail,
-                        subject: opened.subject.startsWith("Re:") ? opened.subject : `Re: ${opened.subject}`,
-                        body: `\n\n\nOn ${new Date(opened.date).toLocaleString()}, ${opened.from} wrote:\n> ${opened.bodyText.split("\n").join("\n> ")}`,
-                        threadId: opened.threadId,
-                      });
-                      setComposeOpen(true);
-                    }}
-                  >
+                  <Button size="sm" variant="ghost" className="ml-auto gap-1" onClick={() => openForward(opened)}>
+                    <Forward className="h-4 w-4" /> Forward
+                  </Button>
+                  <Button size="sm" variant="ghost" className="gap-1" onClick={() => openReply(opened, true)}>
+                    <ReplyAll className="h-4 w-4" /> Reply all
+                  </Button>
+                  <Button size="sm" variant="secondary" className="gap-1" onClick={() => openReply(opened, false)}>
                     <Reply className="h-4 w-4" /> Reply
                   </Button>
                 </div>
+
 
                 {/* AI toolbar — collapsed by default */}
                 <div className="mb-5 rounded-xl border border-border/60 bg-card/40 p-2">
@@ -1464,7 +1693,7 @@ function App() {
       </div>
 
       <SettingsDrawer open={settingsOpen} onOpenChange={setSettingsOpen} />
-      <Compose open={composeOpen} onOpenChange={setComposeOpen} initial={composeInitial} />
+      <Compose open={composeOpen} onOpenChange={setComposeOpen} initial={composeInitial} contacts={contacts} onSent={() => void load()} />
       <CommandPalette
         open={cmdOpen}
         onOpenChange={setCmdOpen}

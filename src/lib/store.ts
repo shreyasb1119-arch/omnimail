@@ -84,6 +84,14 @@ export interface Settings {
   cmdBlur: number;
   sortBy: SortBy;
   layout: LayoutId;
+  /* Mail behaviour */
+  signature: string;
+  undoSendSeconds: number;
+  autoAdvance: boolean;
+  confirmBeforeSend: boolean;
+  showUnreadCounts: boolean;
+  previewLines: number;
+  sendAndArchive: boolean;
 }
 
 export type SortBy = "date" | "sender" | "unread";
@@ -130,6 +138,13 @@ const defaultSettings: Settings = {
   cmdBlur: 28,
   sortBy: "date",
   layout: "comfortable",
+  signature: "",
+  undoSendSeconds: 8,
+  autoAdvance: true,
+  confirmBeforeSend: false,
+  showUnreadCounts: true,
+  previewLines: 1,
+  sendAndArchive: false,
 };
 
 

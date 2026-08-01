@@ -203,25 +203,111 @@ export async function emptyTrash() {
   return total;
 }
 
-export async function sendMessage(opts: { to: string; subject: string; body: string; cc?: string; bcc?: string; threadId?: string }) {
-  const lines = [
+export interface OutgoingAttachment {
+  filename: string;
+  mimeType: string;
+  /** raw base64 (no data: prefix) */
+  data: string;
+}
+
+export async function fileToOutgoing(f: File): Promise<OutgoingAttachment> {
+  const buf = new Uint8Array(await f.arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < buf.length; i += 0x8000) {
+    bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+  }
+  return { filename: f.name, mimeType: f.type || "application/octet-stream", data: btoa(bin) };
+}
+
+export interface SendOpts {
+  to: string;
+  subject: string;
+  body: string;
+  cc?: string;
+  bcc?: string;
+  threadId?: string;
+  inReplyTo?: string;
+  attachments?: OutgoingAttachment[];
+}
+
+export function buildRaw(opts: SendOpts): string {
+  const boundary = "omni_" + Math.random().toString(36).slice(2);
+  const hasAtt = !!opts.attachments?.length;
+  const headers = [
     `To: ${opts.to}`,
     opts.cc ? `Cc: ${opts.cc}` : null,
     opts.bcc ? `Bcc: ${opts.bcc}` : null,
     `Subject: ${opts.subject}`,
-    'Content-Type: text/plain; charset="UTF-8"',
-    "",
-    opts.body,
-  ].filter(Boolean);
-  const raw = btoa(unescape(encodeURIComponent(lines.join("\r\n"))))
+    opts.inReplyTo ? `In-Reply-To: ${opts.inReplyTo}` : null,
+    opts.inReplyTo ? `References: ${opts.inReplyTo}` : null,
+    "MIME-Version: 1.0",
+  ].filter(Boolean) as string[];
+
+  let mime: string;
+  if (!hasAtt) {
+    mime = [...headers, 'Content-Type: text/plain; charset="UTF-8"', "", opts.body].join("\r\n");
+  } else {
+    const parts: string[] = [
+      ...headers,
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
+      "",
+      `--${boundary}`,
+      'Content-Type: text/plain; charset="UTF-8"',
+      "",
+      opts.body,
+    ];
+    for (const a of opts.attachments!) {
+      parts.push(
+        `--${boundary}`,
+        `Content-Type: ${a.mimeType}; name="${a.filename}"`,
+        `Content-Disposition: attachment; filename="${a.filename}"`,
+        "Content-Transfer-Encoding: base64",
+        "",
+        a.data.replace(/(.{76})/g, "$1\r\n"),
+      );
+    }
+    parts.push(`--${boundary}--`);
+    mime = parts.join("\r\n");
+  }
+
+  return btoa(unescape(encodeURIComponent(mime)))
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");
+}
+
+export async function sendMessage(opts: SendOpts) {
   return api(`/messages/send`, {
     method: "POST",
-    body: JSON.stringify({ raw, threadId: opts.threadId }),
+    body: JSON.stringify({ raw: buildRaw(opts), threadId: opts.threadId }),
   });
 }
+
+export async function createDraft(opts: SendOpts) {
+  return api(`/drafts`, {
+    method: "POST",
+    body: JSON.stringify({ message: { raw: buildRaw(opts), threadId: opts.threadId } }),
+  });
+}
+
+/** Report / unreport spam. */
+export async function markSpam(ids: string[], spam: boolean) {
+  if (!ids.length) return;
+  return batchModify(ids, spam ? ["SPAM"] : ["INBOX"], spam ? ["INBOX"] : ["SPAM"]);
+}
+
+/** Gmail's "Important" marker. */
+export async function markImportant(ids: string[], important: boolean) {
+  if (!ids.length) return;
+  return batchModify(ids, important ? ["IMPORTANT"] : [], important ? [] : ["IMPORTANT"]);
+}
+
+/** Mute a conversation — Gmail keeps it out of the inbox. */
+export async function muteThread(ids: string[]) {
+  if (!ids.length) return;
+  return batchModify(ids, [], ["INBOX"]);
+}
+
 
 export const SYSTEM_FOLDERS = [
   { id: "INBOX", label: "Inbox", icon: "inbox" },
@@ -291,4 +377,19 @@ export function formatBytes(n: number) {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/* ---------------- Labels helper ---------------- */
+
+let labelCache: GmailLabel[] | null = null;
+export async function getOrCreateLabel(name: string): Promise<GmailLabel> {
+  if (!labelCache) labelCache = await listLabels();
+  const found = labelCache.find((l) => l.name.toLowerCase() === name.toLowerCase());
+  if (found) return found;
+  const made = await createLabel(name);
+  labelCache.push(made);
+  return made;
+}
+export function invalidateLabelCache() {
+  labelCache = null;
 }
