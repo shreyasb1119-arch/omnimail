@@ -1487,6 +1487,8 @@ function App() {
                   <Button size="sm" variant="ghost" onClick={() => doMarkRead([opened.id], false)} title="Mark as unread (shift+U)"><MailOpen className="h-4 w-4" /> Unread</Button>
                   <Button size="sm" variant="ghost" onClick={() => doSpam([opened.id], folder !== "SPAM")}><ShieldAlert className="h-4 w-4" /> {folder === "SPAM" ? "Not spam" : "Spam"}</Button>
                   <Button size="sm" variant="ghost" onClick={() => window.print()} title="Print"><Printer className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => doImportant([opened.id], !opened.labelIds.includes("IMPORTANT"))} title="Toggle important"><Flag className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => doMute([opened.id])} title="Mute conversation"><VolumeX className="h-4 w-4" /></Button>
                   <select
                     aria-label="Snooze this email"
                     value=""
