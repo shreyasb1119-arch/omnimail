@@ -378,3 +378,18 @@ export function formatBytes(n: number) {
   if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+/* ---------------- Labels helper ---------------- */
+
+let labelCache: GmailLabel[] | null = null;
+export async function getOrCreateLabel(name: string): Promise<GmailLabel> {
+  if (!labelCache) labelCache = await listLabels();
+  const found = labelCache.find((l) => l.name.toLowerCase() === name.toLowerCase());
+  if (found) return found;
+  const made = await createLabel(name);
+  labelCache.push(made);
+  return made;
+}
+export function invalidateLabelCache() {
+  labelCache = null;
+}
