@@ -11,6 +11,7 @@ import {
   Reply, Loader2, Command as CmdIcon, Info, Folder, Plus, MessageSquare, X, Newspaper, ListChecks,
   Radar, BellOff, Clock, ChevronDown, Gauge, Languages, CalendarClock, Paperclip, Download,
   ShieldCheck, UserSearch, Sparkle, Wand2, Crown, BarChart3,
+  MailOpen, Printer, Forward, ReplyAll, VolumeX, Flag,
 
 } from "lucide-react";
 import {
