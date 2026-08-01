@@ -29,6 +29,14 @@ import {
   listLabels, createLabel, downloadAttachment, attachmentObjectUrl, type GmailLabel, type ParsedMessage,
 } from "@/lib/gmail";
 import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
+const LAYOUT_CONF: Record<string, { sidebar: string; list: string; row: string }> = {
+  comfortable: { sidebar: "w-64", list: "w-[420px]", row: "py-3" },
+  compact: { sidebar: "w-52", list: "w-[360px]", row: "py-1.5" },
+  focus: { sidebar: "hidden", list: "w-[440px]", row: "py-3" },
+  wide: { sidebar: "w-72", list: "w-[520px]", row: "py-3.5" },
+  stack: { sidebar: "w-64", list: "w-full", row: "py-3" },
+};
+
 import { useSession, useSettings, sessionStore, settingsStore, getAiLabels, setAiLabel, type AiLabel, type SortBy, type LayoutId } from "@/lib/store";
 import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief, aiSecurityCheck, aiSenderBrief, aiCleanupPlan, aiNaturalSearch, looksNaturalLanguage, aiReplyDraft, aiVipScan, aiInboxReport,
   aiCommitments, aiSpendScan, aiTravelBoard, aiDeadlineBoard, aiRelationshipPulse, aiSmartFolders,
@@ -472,6 +480,50 @@ function App() {
     return list;
   }, [messages, settings.sortBy, oldestFirst]);
 
+
+  // Dynamic island — precise pointer tracking with hysteresis so it does not
+  // flicker when you move fast or slip a few pixels off the pill.
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      const cancelClose = () => {
+        if (islandCloseTimer.current) { clearTimeout(islandCloseTimer.current); islandCloseTimer.current = null; }
+      };
+      const r = islandRef.current?.getBoundingClientRect();
+      const open = islandRef.current?.classList.contains("is-open");
+      if (!open) {
+        // Trigger zone: top strip, centred horizontally, generous but not full width.
+        const cx = window.innerWidth / 2;
+        if (e.clientY <= 16 && Math.abs(e.clientX - cx) <= Math.max(220, window.innerWidth * 0.4)) {
+          cancelClose();
+          setIslandHover(true);
+        }
+        return;
+      }
+      if (!r) return;
+      const pad = 56; // forgiving hit area around the island
+      const inside =
+        e.clientX >= r.left - pad && e.clientX <= r.right + pad &&
+        e.clientY >= r.top - pad - 24 && e.clientY <= r.bottom + pad;
+      if (inside) { cancelClose(); return; }
+      if (islandCloseTimer.current) return;
+      islandCloseTimer.current = setTimeout(() => {
+        islandCloseTimer.current = null;
+        setIslandHover(false);
+        if (!document.activeElement || document.activeElement.id !== "search-input") setSearchOpen(false);
+      }, 220);
+    };
+    const onLeave = () => {
+      if (islandCloseTimer.current) clearTimeout(islandCloseTimer.current);
+      islandCloseTimer.current = setTimeout(() => { islandCloseTimer.current = null; setIslandHover(false); }, 260);
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    document.addEventListener("pointerleave", onLeave);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerleave", onLeave);
+      if (islandCloseTimer.current) clearTimeout(islandCloseTimer.current);
+    };
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
