@@ -1288,26 +1288,45 @@ function App() {
                   <Button size="sm" variant="ghost" onClick={() => setOpenId(null)} aria-label="Back to message list"><ArrowLeft className="h-4 w-4" /></Button>
                   <Button size="sm" variant="ghost" onClick={() => doArchive([opened.id])}><Archive className="h-4 w-4" /> Archive</Button>
                   <Button size="sm" variant="ghost" className="text-destructive" onClick={() => doTrash([opened.id])}><Trash2 className="h-4 w-4" /> Trash</Button>
+                  <Button size="sm" variant="ghost" onClick={() => doMarkRead([opened.id], false)} title="Mark as unread (shift+U)"><MailOpen className="h-4 w-4" /> Unread</Button>
+                  <Button size="sm" variant="ghost" onClick={() => doSpam([opened.id], folder !== "SPAM")}><ShieldAlert className="h-4 w-4" /> {folder === "SPAM" ? "Not spam" : "Spam"}</Button>
+                  <Button size="sm" variant="ghost" onClick={() => window.print()} title="Print"><Printer className="h-4 w-4" /></Button>
+                  <select
+                    aria-label="Snooze this email"
+                    value=""
+                    onChange={(e) => { if (e.target.value) void doSnooze([opened.id], Number(e.target.value)); }}
+                    className="rounded-md border border-border/60 bg-card/50 px-2 py-1 text-[11px] text-muted-foreground outline-none hover:text-foreground"
+                  >
+                    <option value="">Snooze…</option>
+                    {SNOOZE_PRESETS.map((p) => (
+                      <option key={p.label} value={p.ms()}>{p.label}</option>
+                    ))}
+                  </select>
+                  <select
+                    aria-label="Move to folder"
+                    value=""
+                    onChange={(e) => { if (e.target.value) void doMoveToLabel([opened.id], e.target.value); }}
+                    className="rounded-md border border-border/60 bg-card/50 px-2 py-1 text-[11px] text-muted-foreground outline-none hover:text-foreground"
+                  >
+                    <option value="">Move to…</option>
+                    {userLabels.map((l) => (
+                      <option key={l.id} value={l.id}>{l.name}</option>
+                    ))}
+                  </select>
                   {folder === "TRASH" && (
                     <Button size="sm" variant="destructive" onClick={() => doPermanentDelete([opened.id])}>Delete forever</Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="ml-auto gap-1"
-                    onClick={() => {
-                      setComposeInitial({
-                        to: opened.fromEmail,
-                        subject: opened.subject.startsWith("Re:") ? opened.subject : `Re: ${opened.subject}`,
-                        body: `\n\n\nOn ${new Date(opened.date).toLocaleString()}, ${opened.from} wrote:\n> ${opened.bodyText.split("\n").join("\n> ")}`,
-                        threadId: opened.threadId,
-                      });
-                      setComposeOpen(true);
-                    }}
-                  >
+                  <Button size="sm" variant="ghost" className="ml-auto gap-1" onClick={() => openForward(opened)}>
+                    <Forward className="h-4 w-4" /> Forward
+                  </Button>
+                  <Button size="sm" variant="ghost" className="gap-1" onClick={() => openReply(opened, true)}>
+                    <ReplyAll className="h-4 w-4" /> Reply all
+                  </Button>
+                  <Button size="sm" variant="secondary" className="gap-1" onClick={() => openReply(opened, false)}>
                     <Reply className="h-4 w-4" /> Reply
                   </Button>
                 </div>
+
 
                 {/* AI toolbar — collapsed by default */}
                 <div className="mb-5 rounded-xl border border-border/60 bg-card/40 p-2">
