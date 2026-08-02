@@ -267,6 +267,14 @@ function App() {
     return startSnoozeWatcher((i) => toast.info(`Snoozed email is back: ${i.subject || "(no subject)"}`));
   }, [session]);
 
+  // Keep settings in sync across browsers and devices for this Google account.
+  useEffect(() => {
+    if (!session) return;
+    return startSettingsSync();
+  }, [session?.profile.email]);
+
+
+
 
   const load = useCallback(async () => {
     if (!session) return;
