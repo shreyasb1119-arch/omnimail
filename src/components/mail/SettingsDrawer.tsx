@@ -8,10 +8,12 @@ import { Separator } from "@/components/ui/separator";
 import { settingsStore, useSettings, THEMES, WALLPAPERS, LAYOUTS, type Theme, type LayoutId } from "@/lib/store";
 import { toast } from "sonner";
 import { signOut } from "@/lib/gauth";
+import { useSyncState, syncNow, pullNow } from "@/lib/sync";
 
 
 export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const s = useSettings();
+  const sync = useSyncState();
   const [clientId, setClientId] = useState(s.clientId);
   const [geminiKey, setGeminiKey] = useState(s.geminiKey);
 
