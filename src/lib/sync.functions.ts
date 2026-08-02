@@ -28,19 +28,19 @@ export const pullSettings = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     return {
-      settings: (row?.settings ?? null) as Record<string, unknown> | null,
+      settingsJson: row?.settings ? JSON.stringify(row.settings) : null,
       updatedAt: row?.updated_at ?? null,
     };
   });
 
 export const pushSettings = createServerFn({ method: "POST" })
-  .inputValidator((d: { accessToken: string; settings: Record<string, unknown> }) => d)
+  .inputValidator((d: { accessToken: string; settingsJson: string }) => d)
   .handler(async ({ data }) => {
     const { sub, email } = await identify(data.accessToken);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const updatedAt = new Date().toISOString();
     const { error } = await supabaseAdmin.from("user_settings").upsert(
-      { google_sub: sub, email, settings: data.settings as never, updated_at: updatedAt },
+      { google_sub: sub, email, settings: JSON.parse(data.settingsJson) as never, updated_at: updatedAt },
       { onConflict: "google_sub" },
     );
     if (error) throw new Error(error.message);
