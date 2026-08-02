@@ -73,6 +73,29 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
           </section>
           <Separator />
           <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sync</h3>
+            <p className="text-xs text-muted-foreground">
+              Your theme, wallpaper, layout and mail preferences follow your Google account, so a new
+              browser or phone picks up right where you left off. Your API keys stay on this device only.
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={async () => { await syncNow(); await pullNow(); toast.success("Settings synced"); }}>
+                Sync now
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                {sync.status === "syncing"
+                  ? "Syncing…"
+                  : sync.status === "error"
+                    ? `Sync issue: ${sync.message}`
+                    : sync.lastSync
+                      ? `Last synced ${new Date(sync.lastSync).toLocaleTimeString()}`
+                      : "Sign in to sync"}
+              </span>
+            </div>
+          </section>
+          <Separator />
+
+          <section className="space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mail behaviour</h3>
             <div className="space-y-2">
               <Label>Signature</Label>
