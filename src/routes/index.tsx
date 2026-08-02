@@ -31,6 +31,7 @@ import {
   listLabels, createLabel, downloadAttachment, attachmentObjectUrl, markSpam, markImportant, muteThread,
   type GmailLabel, type ParsedMessage,
 } from "@/lib/gmail";
+import { startSettingsSync } from "@/lib/sync";
 import { snooze, SNOOZE_PRESETS, SNOOZE_LABEL, useSnoozed, startSnoozeWatcher } from "@/lib/snooze";
 import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
 import { useSession, useSettings, sessionStore, settingsStore, getAiLabels, setAiLabel, type AiLabel, type SortBy, type LayoutId } from "@/lib/store";
