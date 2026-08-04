@@ -916,6 +916,35 @@ function App() {
 
   const pendingScheduled = scheduled.filter((s) => s.status === "pending").length;
 
+  /* --- Unified suites: one product runs its related analyses in parallel --- */
+  type InboxFn = (items: { from: string; subject: string; snippet: string }[]) => Promise<string>;
+  type ReaderFn = (subject: string, from: string, body: string) => Promise<string>;
+
+  const runInboxSuite = async (id: string, title: string, parts: { name: string; fn: InboxFn }[]) => {
+    if (!messages.length) return;
+    setAiBusy(id);
+    const items = messages.slice(0, 40).map((m) => ({ from: m.from, subject: m.subject, snippet: m.snippet }));
+    try {
+      const outs = await Promise.all(
+        parts.map((p) => p.fn(items).catch((e: any) => `Unavailable — ${e?.message || "failed"}`)),
+      );
+      setScan({ title, text: parts.map((p, i) => `## ${p.name}\n${outs[i]}`).join("\n\n") });
+    } catch (e: any) { toast.error(e.message || `${title} failed`); }
+    finally { setAiBusy(null); }
+  };
+
+  const runReaderSuite = async (id: string, title: string, parts: { name: string; fn: ReaderFn }[]) => {
+    if (!opened) return;
+    setAiBusy(id);
+    const s = opened.subject, f = opened.from, b = opened.bodyText || opened.snippet;
+    try {
+      const outs = await Promise.all(
+        parts.map((p) => p.fn(s, f, b).catch((e: any) => `Unavailable — ${e?.message || "failed"}`)),
+      );
+      setScan({ title, text: parts.map((p, i) => `## ${p.name}\n${outs[i]}`).join("\n\n") });
+    } catch (e: any) { toast.error(e.message || `${title} failed`); }
+    finally { setAiBusy(null); }
+  };
 
   const AI_TOOLS = [
     { id: "triage", label: "Smart Triage", icon: Filter, run: runTriage, busy: triaging, badge: 0,
@@ -924,128 +953,133 @@ function App() {
       info: "Uses AI triage to identify cold outreach and promotional junk in view, then moves them to Trash. Nothing is permanently deleted." },
     { id: "priority", label: "Priority Sort", icon: Gauge, run: runPriority, busy: aiBusy === "priority", badge: 0,
       info: "Ranks the messages in view by what you should handle first, with a one-line reason for each." },
-    { id: "digest", label: "Daily Digest", icon: Newspaper, run: runDigest, busy: aiBusy === "digest", badge: 0,
-      info: "Reads the messages currently in view and writes a short brief — what's urgent, what can wait, grouped by theme." },
-    { id: "radar", label: "Follow-up Radar", icon: Radar, run: runRadar, busy: aiBusy === "radar", badge: 0,
-      info: "Surfaces only the threads still waiting on your reply, most urgent first." },
-    { id: "scout", label: "Unsubscribe Scout", icon: BellOff, run: runScout, busy: aiBusy === "scout", badge: 0,
-      info: "Groups newsletters and automated senders, counts how much space they take, and tells you which to drop." },
-    { id: "vip", label: "VIP Radar", icon: Crown, run: runVip, busy: aiBusy === "vip", badge: 0,
-      info: "Separates the real humans who matter — clients, colleagues, money — from the automated noise in view." },
-    { id: "report", label: "Inbox Report", icon: BarChart3, run: runReport, busy: aiBusy === "report", badge: 0,
-      info: "An analytics-style read on your loaded mail: volume, top senders, recurring themes and time sinks." },
-    { id: "cleanup", label: "Cleanup Plan", icon: Sparkle, run: runCleanupPlan, busy: aiBusy === "cleanup", badge: 0,
-      info: "Turns the messages in view into a concrete plan: what to archive now, what to reply to today, and what to unsubscribe from." },
-    { id: "commitments", label: "Commitment Tracker", icon: ListChecks, run: () => runInboxTool("commitments", "Commitment tracker", aiCommitments), busy: aiBusy === "commitments", badge: 0,
-      info: "Finds everything you promised someone across the mail in view, with who's waiting and by when." },
-    { id: "spend", label: "Spend Scan", icon: BarChart3, run: () => runInboxTool("spend", "Spend scan", aiSpendScan), busy: aiBusy === "spend", badge: 0,
-      info: "Pulls receipts, invoices, subscriptions and renewals out of your inbox so you can see what you're paying for." },
-    { id: "travel", label: "Travel Board", icon: CalendarClock, run: () => runInboxTool("travel", "Travel board", aiTravelBoard), busy: aiBusy === "travel", badge: 0,
-      info: "Builds a chronological itinerary from flight, hotel and booking confirmations, with confirmation codes." },
-    { id: "deadlines", label: "Deadline Board", icon: Clock, run: () => runInboxTool("deadlines", "Deadline board", aiDeadlineBoard), busy: aiBusy === "deadlines", badge: 0,
-      info: "Every date, due date and event mentioned anywhere in your loaded mail, sorted by when it lands." },
-    { id: "pulse", label: "Relationship Pulse", icon: Crown, run: () => runInboxTool("pulse", "Relationship pulse", aiRelationshipPulse), busy: aiBusy === "pulse", badge: 0,
-      info: "Shows which contacts are warm and which are going cold because you never replied." },
-    { id: "folders", label: "Smart Folders", icon: Plus, run: () => runInboxTool("folders", "Suggested folders", aiSmartFolders), busy: aiBusy === "folders", badge: 0,
-      info: "Suggests the 4-6 folders that would actually fit your mail, with what belongs in each." },
-    { id: "rules", label: "Rule Builder", icon: Filter, run: () => runInboxTool("rules", "Suggested rules", aiRuleBuilder), busy: aiBusy === "rules", badge: 0,
-      info: "Writes safe auto-rules — IF from:x THEN archive — that would quietly cut the noise for good." },
-    { id: "plan", label: "Daily Plan", icon: Gauge, run: () => runInboxTool("plan", "Daily plan", aiDailyPlan), busy: aiBusy === "plan", badge: 0,
-      info: "Turns the inbox into a time-blocked plan for today, highest-leverage work first." },
-    { id: "dupes", label: "Duplicate Scan", icon: Sparkle, run: () => runInboxTool("dupes", "Duplicate scan", aiDuplicateScan), busy: aiBusy === "dupes", badge: 0,
-      info: "Clusters resends and repeated notification chains and tells you which single copy to keep." },
     { id: "queue", label: "Scheduled", icon: Clock, run: () => setQueueOpen(true), busy: false, badge: pendingScheduled,
       info: "Ask the assistant to \"send X an email in 10 minutes\" — Gemini drafts it and it goes out on time. Cancel any time here." },
-    { id: "waiting", label: "Waiting On Them", icon: Clock, run: () => runInboxTool("waiting", "Waiting on them", aiWaitingOnThem), busy: aiBusy === "waiting", badge: 0,
-      info: "The mirror of Follow-up Radar: threads where you already replied and someone else still owes you an answer." },
-    { id: "recap", label: "Weekly Recap", icon: Newspaper, run: () => runInboxTool("recap", "Weekly recap", aiWeeklyRecap), busy: aiBusy === "recap", badge: 0,
-      info: "A week-in-review of your mail: what moved, what stalled, and the three things to carry into next week." },
-    { id: "riskscan", label: "Inbox Risk Scan", icon: ShieldCheck, run: () => runInboxTool("riskscan", "Inbox risk scan", aiInboxRiskScan), busy: aiBusy === "riskscan", badge: 0,
-      info: "Sweeps every loaded message for phishing, spoofed senders and invoice fraud instead of checking one email at a time." },
-    { id: "opps", label: "Opportunity Finder", icon: Crown, run: () => runInboxTool("opps", "Opportunity finder", aiOpportunityFinder), busy: aiBusy === "opps", badge: 0,
-      info: "Digs out warm intros, deals, partnerships and invitations buried in the noise, with the one move to make on each." },
-    { id: "newsdigest", label: "Newsletter Digest", icon: Newspaper, run: () => runInboxTool("newsdigest", "Newsletter digest", aiNewsletterDigest), busy: aiBusy === "newsdigest", badge: 0,
-      info: "Merges every newsletter and automated update in view into one short read, and names the senders you can skip." },
-    { id: "categorize", label: "Bulk Categorize", icon: Filter, run: () => runInboxTool("categorize", "Bulk categorize", aiBulkCategorize), busy: aiBusy === "categorize", badge: 0,
-      info: "Tags each message in view as Work, Money, Travel, Personal, Newsletter, Promo, Notification or Spam so filing is one pass." },
-    { id: "responsecoach", label: "Response Coach", icon: Gauge, run: () => runInboxTool("responsecoach", "Response coach", aiResponseCoach), busy: aiBusy === "responsecoach", badge: 0,
-      info: "Shows who has been waiting longest, which threads are going stale, and the three replies to send today." },
-    { id: "fileindex", label: "Attachment Index", icon: Paperclip, run: () => runInboxTool("fileindex", "Attachment index", aiAttachmentIndex), busy: aiBusy === "fileindex", badge: 0,
-      info: "Indexes the documents, invoices and contracts that arrived in view, with what each is for and whether to keep it." },
-    { id: "snooze", label: "Snooze Plan", icon: Clock, run: () => runInboxTool("snooze", "Snooze plan", aiSnoozePlan), busy: aiBusy === "snooze", badge: 0,
-      info: "Decides what can leave the inbox now and exactly when it should come back, so only today's mail stays in front of you." },
+
+    { id: "briefing", label: "Briefing", icon: Newspaper, busy: aiBusy === "briefing", badge: 0,
+      info: "One report that merges your daily digest, a time-blocked plan for today, inbox analytics and a week-in-review.",
+      run: () => runInboxSuite("briefing", "Briefing", [
+        { name: "Today's digest", fn: aiDigest },
+        { name: "Daily plan", fn: aiDailyPlan },
+        { name: "Inbox report", fn: aiInboxReport },
+        { name: "Weekly recap", fn: aiWeeklyRecap },
+      ]) },
+    { id: "followups", label: "Follow-ups", icon: Radar, busy: aiBusy === "followups", badge: 0,
+      info: "Everything owed in both directions: threads waiting on you, threads you're waiting on, promises you made, and the replies to send today.",
+      run: () => runInboxSuite("followups", "Follow-ups", [
+        { name: "Waiting on you", fn: aiFollowUpRadar },
+        { name: "Waiting on them", fn: aiWaitingOnThem },
+        { name: "Your commitments", fn: aiCommitments },
+        { name: "Send these today", fn: aiResponseCoach },
+      ]) },
+    { id: "people", label: "People", icon: Crown, busy: aiBusy === "people", badge: 0,
+      info: "Who matters in your inbox: VIP senders, relationships going cold, and the opportunities buried in the noise.",
+      run: () => runInboxSuite("people", "People", [
+        { name: "VIP senders", fn: aiVipScan },
+        { name: "Relationship pulse", fn: aiRelationshipPulse },
+        { name: "Opportunities", fn: aiOpportunityFinder },
+      ]) },
+    { id: "money", label: "Money & Travel", icon: BarChart3, busy: aiBusy === "money", badge: 0,
+      info: "Receipts, subscriptions and renewals, every upcoming deadline, and a chronological travel itinerary — in one pass.",
+      run: () => runInboxSuite("money", "Money & Travel", [
+        { name: "Spend & subscriptions", fn: aiSpendScan },
+        { name: "Deadlines", fn: aiDeadlineBoard },
+        { name: "Travel itinerary", fn: aiTravelBoard },
+      ]) },
+    { id: "cleanup", label: "Cleanup", icon: Sparkle, busy: aiBusy === "cleanup", badge: 0,
+      info: "A single plan to shrink the inbox: what to archive, which senders to unsubscribe from, duplicate chains, and every newsletter merged into one read.",
+      run: () => runInboxSuite("cleanup", "Cleanup", [
+        { name: "Cleanup plan", fn: aiCleanupPlan },
+        { name: "Unsubscribe", fn: aiUnsubscribeScout },
+        { name: "Duplicates", fn: aiDuplicateScan },
+        { name: "Newsletter digest", fn: aiNewsletterDigest },
+      ]) },
+    { id: "organise", label: "Organise", icon: Plus, busy: aiBusy === "organise", badge: 0,
+      info: "Categories for every message in view, the folders worth creating, safe auto-rules, and what to snooze until later.",
+      run: () => runInboxSuite("organise", "Organise", [
+        { name: "Categories", fn: aiBulkCategorize },
+        { name: "Suggested folders", fn: aiSmartFolders },
+        { name: "Suggested rules", fn: aiRuleBuilder },
+        { name: "Snooze plan", fn: aiSnoozePlan },
+      ]) },
+    { id: "protect", label: "Protect", icon: ShieldCheck, busy: aiBusy === "protect", badge: 0,
+      info: "Sweeps every loaded message for phishing, spoofing and invoice fraud, and indexes the documents that arrived.",
+      run: () => runInboxSuite("protect", "Protect", [
+        { name: "Risk scan", fn: aiInboxRiskScan },
+        { name: "Attachment index", fn: aiAttachmentIndex },
+      ]) },
   ];
-
-
 
   const READER_TOOLS = [
     { id: "replydraft", label: "Draft full reply", icon: Wand2, run: runReplyDraft, busy: aiBusy === "reply",
       info: "Writes a complete, ready-to-send reply that answers every question in the email, then opens it in Compose." },
-    { id: "summary", label: "Summarize", icon: ListChecks, run: runSummarize, busy: aiBusy === "summary",
-      info: "Condenses this email into 3 bullets plus the single action it asks of you." },
     { id: "replies", label: "Smart replies", icon: MessageSquare, run: runSmartReplies, busy: aiBusy === "replies",
       info: "Generates 3 one-line replies. Click one to open Compose pre-filled with it." },
-    { id: "tasks", label: "Action items", icon: ListChecks, run: runTasks, busy: aiBusy === "tasks",
-      info: "Pulls every task, deadline and commitment out of this email into a dated checklist." },
-    { id: "tone", label: "Tone read", icon: Gauge, run: runTone, busy: aiBusy === "tone",
-      info: "Tells you the sender's real tone, how urgent it truly is, what they're actually asking, and what breaks if you ignore it." },
-    { id: "meeting", label: "Meeting extract", icon: CalendarClock, run: runMeeting, busy: aiBusy === "meeting",
-      info: "Finds any proposed call or event and lays it out calendar-ready: title, time, place, attendees and prep." },
-    { id: "translate", label: "Translate", icon: Languages, run: runTranslate, busy: aiBusy === "translate",
-      info: "Rewrites the subject and body in your language without leaving the thread." },
-    { id: "files", label: "Attachment brief", icon: Paperclip, run: runAttachmentBrief, busy: aiBusy === "files",
-      info: "Explains what the attached files are, which one actually matters, and the single action to take." },
-    { id: "security", label: "Security check", icon: ShieldCheck, run: runSecurityCheck, busy: aiBusy === "security",
-      info: "Checks this email for phishing, spoofing and invoice-fraud signals, then tells you exactly what to do." },
-    { id: "sender", label: "Sender brief", icon: UserSearch, run: runSenderBrief, busy: aiBusy === "sender",
-      info: "Profiles this sender from every loaded email they sent you: what they usually want and which threads are still open." },
-    { id: "timeline", label: "Thread timeline", icon: Clock, run: () => runReaderTool("timeline", "Thread timeline", aiThreadTimeline), busy: aiBusy === "timeline",
-      info: "Reconstructs who said what in this thread and ends with exactly what is waiting on you." },
-    { id: "explain", label: "Explain simply", icon: Languages, run: () => runReaderTool("explain", "Explain simply", aiExplainSimply), busy: aiBusy === "explain",
-      info: "Rewrites dense, legal or jargon-heavy mail into plain English, with the terms defined." },
-    { id: "variants", label: "Reply in 3 tones", icon: MessageSquare, run: () => runReaderTool("variants", "Reply in 3 tones", aiToneVariants), busy: aiBusy === "variants",
-      info: "Drafts the same reply warm, direct and firm so you can pick the register that fits." },
-    { id: "counter", label: "Counter-proposal", icon: Gauge, run: () => runReaderTool("counter", "Counter-proposal", aiCounterProposal), busy: aiBusy === "counter",
-      info: "Reads the ask, weighs both sides' leverage, and writes a ready-to-send counter." },
-    { id: "decline", label: "Politely decline", icon: BellOff, run: () => runReaderTool("decline", "Politely decline", aiPoliteDecline), busy: aiBusy === "decline",
-      info: "A warm, short, unambiguous no that keeps the relationship intact." },
-    { id: "ics", label: "Calendar draft", icon: CalendarClock, run: () => runReaderTool("ics", "Calendar draft", aiCalendarDraft), busy: aiBusy === "ics",
-      info: "Turns any event in the email into a calendar-ready .ics block you can paste into your calendar." },
-    { id: "contacts", label: "Extract contacts", icon: UserSearch, run: () => runReaderTool("contacts", "Extracted contacts", aiExtractContacts), busy: aiBusy === "contacts",
-      info: "Lifts every person, company, address, phone number, link and reference number out of the message." },
     { id: "pdf", label: "Save as PDF", icon: FileText, run: () => opened && printMessageAsPdf({ subject: opened.subject, from: opened.from, to: opened.to, date: opened.date, bodyHtml: opened.bodyHtml, bodyText: opened.bodyText }), busy: false,
       info: "Exports this email — headers and body — as a clean PDF via your browser's print dialog." },
-    { id: "factcheck", label: "Fact check", icon: ShieldCheck, run: () => runReaderTool("factcheck", "Fact check", aiFactCheck), busy: aiBusy === "factcheck",
-      info: "Lists every claim, number, date and promise in the email and flags which ones to verify before you act." },
-    { id: "contract", label: "Terms risk review", icon: FileText, run: () => runReaderTool("contract", "Terms risk review", aiContractRisk), busy: aiBusy === "contract",
-      info: "Reads the email for liability, indemnity, auto-renewal and payment traps, and suggests safer wording." },
-    { id: "forward", label: "Forward note", icon: MessageSquare, run: () => runReaderTool("forward", "Forward note", aiForwardBlurb), busy: aiBusy === "forward",
-      info: "Writes the two-line context blurb plus the ask, so forwarding this to a colleague takes one paste." },
-    { id: "questions", label: "Questions to ask", icon: UserSearch, run: () => runReaderTool("questions", "Questions to ask", aiClarifyingQuestions), busy: aiBusy === "questions",
-      info: "The 3-5 clarifying questions worth sending back before you commit, ordered by how much they unblock you." },
-    { id: "checklist", label: "Action checklist", icon: ListChecks, run: () => runReaderTool("checklist", "Action checklist", aiChecklist), busy: aiBusy === "checklist",
-      info: "Turns the email into up to six concrete steps, each with an owner and a due moment." },
-    { id: "objections", label: "Anticipate objections", icon: ShieldAlert, run: () => runReaderTool("objections", "Anticipate objections", aiObjections), busy: aiBusy === "objections",
-      info: "Predicts the pushback the sender will raise to your reply and gives you the answer to each." },
-    { id: "decision", label: "Decision Brief", icon: Gauge, run: () => runReaderTool("decision", "Decision brief", aiDecisionBrief), busy: aiBusy === "decision",
-      info: "Strips the email down to the decision it demands: TL;DR, the choice, the deadline, what breaks if you ignore it, and the move to make." },
-    { id: "replylang", label: "Reply in their language", icon: Languages, run: () => runReaderTool("replylang", "Reply in their language", aiReplyInLanguage), busy: aiBusy === "replylang",
-      info: "Detects the language the email was written in and drafts a natural reply in that same language." },
+
+    { id: "brief", label: "Brief", icon: ListChecks, busy: aiBusy === "brief",
+      info: "The whole email in one view: summary, the decision it demands, and the sender's real tone and urgency.",
+      run: () => runReaderSuite("brief", "Brief", [
+        { name: "Summary", fn: aiSummarize },
+        { name: "Decision", fn: aiDecisionBrief },
+        { name: "Tone & intent", fn: aiToneRead },
+      ]) },
+    { id: "deeper", label: "Read deeper", icon: Clock, busy: aiBusy === "deeper",
+      info: "Thread timeline, a plain-English rewrite of anything dense, and a translation into your language.",
+      run: () => runReaderSuite("deeper", "Read deeper", [
+        { name: "Thread timeline", fn: aiThreadTimeline },
+        { name: "In plain English", fn: aiExplainSimply },
+        { name: `Translated to ${settings.translateTo || "English"}`, fn: (s, _f, b) => aiTranslate(s, b, settings.translateTo || "English") },
+      ]) },
+    { id: "replystudio", label: "Reply studio", icon: MessageSquare, busy: aiBusy === "replystudio",
+      info: "Every angle on the response: warm/direct/firm versions, a counter-proposal, a polite no, a forward note, and a reply in their language.",
+      run: () => runReaderSuite("replystudio", "Reply studio", [
+        { name: "Three tones", fn: aiToneVariants },
+        { name: "Counter-proposal", fn: aiCounterProposal },
+        { name: "Politely decline", fn: aiPoliteDecline },
+        { name: "Forward note", fn: aiForwardBlurb },
+        { name: "In their language", fn: aiReplyInLanguage },
+      ]) },
+    { id: "prep", label: "Prep", icon: UserSearch, busy: aiBusy === "prep",
+      info: "The clarifying questions worth asking back, and the pushback to expect with an answer for each.",
+      run: () => runReaderSuite("prep", "Prep", [
+        { name: "Questions to ask", fn: aiClarifyingQuestions },
+        { name: "Anticipated objections", fn: aiObjections },
+      ]) },
+    { id: "extract", label: "Extract", icon: CalendarClock, busy: aiBusy === "extract",
+      info: "Pulls out tasks, a step-by-step checklist, any meeting with a calendar-ready block, and every contact detail.",
+      run: () => runReaderSuite("extract", "Extract", [
+        { name: "Action items", fn: aiExtractTasks },
+        { name: "Checklist", fn: aiChecklist },
+        { name: "Meeting", fn: aiMeetingExtract },
+        { name: "Calendar draft", fn: aiCalendarDraft },
+        { name: "Contacts", fn: aiExtractContacts },
+      ]) },
+    { id: "verify", label: "Verify", icon: ShieldCheck, busy: aiBusy === "verify",
+      info: "Phishing and fraud signals, every claim worth checking, and the liability, auto-renewal and payment traps in the terms.",
+      run: () => runReaderSuite("verify", "Verify", [
+        { name: "Security check", fn: aiSecurityCheck },
+        { name: "Fact check", fn: aiFactCheck },
+        { name: "Terms risk", fn: aiContractRisk },
+      ]) },
+    { id: "files", label: "Attachment brief", icon: Paperclip, run: runAttachmentBrief, busy: aiBusy === "files",
+      info: "Explains what the attached files are, which one actually matters, and the single action to take." },
+    { id: "sender", label: "Sender brief", icon: UserSearch, run: runSenderBrief, busy: aiBusy === "sender",
+      info: "Profiles this sender from every loaded email they sent you: what they usually want and which threads are still open." },
   ];
 
-  // Sub-groups so the big AI menus stay scannable
+  // Unified product groups — a handful of products instead of dozens of one-off tools
   const INBOX_GROUPS: { name: string; ids: string[] }[] = [
-    { name: "Triage & cleanup", ids: ["triage", "purge", "priority", "dupes", "scout", "cleanup"] },
-    { name: "Daily briefings", ids: ["digest", "plan", "recap", "report", "newsdigest"] },
-    { name: "People & follow-ups", ids: ["radar", "waiting", "vip", "pulse", "commitments", "opps", "responsecoach"] },
-    { name: "Money, dates & travel", ids: ["spend", "deadlines", "travel", "queue"] },
-    { name: "Organise & protect", ids: ["folders", "rules", "riskscan", "categorize", "fileindex", "snooze"] },
+    { name: "Act on the inbox", ids: ["triage", "purge", "priority", "queue"] },
+    { name: "Reports", ids: ["briefing", "followups", "people", "money"] },
+    { name: "Cleanup & safety", ids: ["cleanup", "organise", "protect"] },
   ];
   const READER_GROUPS: { name: string; ids: string[] }[] = [
-    { name: "Understand", ids: ["summary", "decision", "explain", "tone", "timeline", "translate"] },
-    { name: "Reply", ids: ["replydraft", "replies", "variants", "counter", "decline", "forward", "questions", "objections", "replylang"] },
-    { name: "Extract", ids: ["tasks", "meeting", "ics", "contacts", "files", "checklist"] },
-    { name: "Verify & export", ids: ["security", "factcheck", "contract", "sender", "pdf"] },
+    { name: "Understand", ids: ["brief", "deeper"] },
+    { name: "Reply", ids: ["replydraft", "replies", "replystudio", "prep"] },
+    { name: "Extract & files", ids: ["extract", "files", "sender", "pdf"] },
+    { name: "Verify", ids: ["verify"] },
   ];
 
 
