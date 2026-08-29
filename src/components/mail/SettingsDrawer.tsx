@@ -65,7 +65,7 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
                 onChange={(e) => setGeminiKey(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                With a key, requests go straight to <b>Gemini 3.1 Flash Lite</b>. Leave empty to use built-in AI.
+                With a key, requests go straight to <b>Gemini 3.6 Flash</b>. Leave empty to use built-in AI.
               </p>
             </div>
             <div className="flex gap-2">
