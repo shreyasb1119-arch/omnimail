@@ -291,6 +291,10 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
             </div>
           ))}
         </div>
+        <p className="mx-auto mt-6 max-w-2xl rounded-2xl border border-border/50 bg-card/40 p-4 text-center text-sm text-muted-foreground">
+          These forty tools have been merged into <span className="font-semibold text-foreground">23 unified AI features</span> — fewer buttons,
+          each one running its related analyses together and returning a single clear report.
+        </p>
       </section>
 
       {/* Core features */}
