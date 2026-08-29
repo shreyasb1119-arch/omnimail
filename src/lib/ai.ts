@@ -22,7 +22,7 @@ export async function aiChat(prompt: string, userSystem = ""): Promise<string> {
       { role: "user", parts: [{ text: prompt }] },
     ];
     const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${encodeURIComponent(key)}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${encodeURIComponent(key)}`,
 
       {
         method: "POST",

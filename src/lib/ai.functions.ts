@@ -16,7 +16,7 @@ export const lovableAiChat = createServerFn({ method: "POST" })
         "Lovable-API-Key": key,
       },
       body: JSON.stringify({
-        model: "google/gemini-3.1-flash-lite",
+        model: "google/gemini-3.6-flash",
         messages: [
           ...(data.system ? [{ role: "system", content: data.system }] : []),
           { role: "user", content: data.prompt },
