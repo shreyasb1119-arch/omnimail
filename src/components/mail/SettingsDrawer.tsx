@@ -338,8 +338,36 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
             </div>
           </section>
           <Separator />
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Surface style</h3>
+            <p className="text-xs text-muted-foreground">
+              Glass uses translucent blur over your wallpaper. Material You uses opaque tonal surfaces tinted
+              with your accent colour — no blur, flatter, faster.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { id: "glass", label: "Glass", desc: "Blurred, translucent" },
+                { id: "material", label: "Material You", desc: "Tonal, opaque" },
+              ] as const).map((o) => (
+                <button
+                  key={o.id}
+                  onClick={() => settingsStore.set({ surface: o.id })}
+                  className={`press rounded-2xl border p-3 text-left transition ${
+                    (s.surface || "glass") === o.id
+                      ? "border-primary bg-primary/10"
+                      : "border-border/60 bg-card/40 hover:border-primary/40"
+                  }`}
+                >
+                  <div className="text-xs font-semibold">{o.label}</div>
+                  <div className="mt-0.5 text-[10px] text-muted-foreground">{o.desc}</div>
+                </button>
+              ))}
+            </div>
+          </section>
+          <Separator />
           <section className="space-y-4">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sidebar panels</h3>
+
             <div className="space-y-2">
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Panel opacity</span><span>{s.panelOpacity}%</span>
