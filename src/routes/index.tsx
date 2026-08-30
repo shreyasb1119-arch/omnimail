@@ -1193,37 +1193,46 @@ function App() {
           {/* Sidebar */}
           {L.sidebar !== "hidden" && (
           <aside className={`glass no-scrollbar flex shrink-0 flex-col overflow-y-auto rounded-2xl px-3 py-4 shadow-xl ${L.sidebar}`}>
-            <div className="mb-5 flex items-center gap-2.5 px-1">
-              <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-2xl bg-foreground text-background shadow-md">
-                {avatarSrc ? (
-                  <img src={avatarSrc} alt="Your avatar" className="h-full w-full object-cover" />
-                ) : (
-                  <Mail className="h-4 w-4" />
-                )}
-              </div>
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold tracking-tight">
-                  {session.profile.name || "Omni Mail"}
+            <div className="mb-4 px-1">
+              <div className="display-xl text-[2rem] leading-none">OMNI</div>
+              <div className="eyebrow mt-1">mail</div>
+              <div className="mt-3 flex items-center gap-2.5 rounded-full border border-border/50 bg-card/40 p-1 pr-3">
+                <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-foreground text-background">
+                  {avatarSrc ? (
+                    <img src={avatarSrc} alt="Your avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    <Mail className="h-3.5 w-3.5" />
+                  )}
                 </div>
-                <div className="truncate text-[10px] text-muted-foreground">{session.profile.email}</div>
+                <div className="min-w-0">
+                  <div className="truncate text-xs font-semibold tracking-tight">
+                    {session.profile.name || "Omni Mail"}
+                  </div>
+                  <div className="truncate text-[10px] text-muted-foreground">{session.profile.email}</div>
+                </div>
               </div>
             </div>
 
             <Button
               onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
-              className="hover-mag mb-3 justify-start gap-2 rounded-xl"
+              className="hover-mag mb-4 h-11 justify-start gap-2"
             >
               <PenSquare className="h-4 w-4" /> <span className="mag-text">Compose</span>
             </Button>
-            <nav className="space-y-0.5">
+            <nav className="space-y-1">
               {SYSTEM_FOLDERS.map((f) => (
                 <button
                   key={f.id}
                   onClick={() => { setFolder(f.id); setActiveQuery(""); setQuery(""); }}
-                  className={`hover-mag flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm ${
-                    folder === f.id && !activeQuery ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                  className={`hover-mag relative flex w-full items-center gap-3 rounded-full px-3 py-2 text-sm transition ${
+                    folder === f.id && !activeQuery
+                      ? "bg-primary/15 font-semibold text-foreground"
+                      : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
                   }`}
                 >
+                  {folder === f.id && !activeQuery && (
+                    <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-primary" />
+                  )}
                   <f.icon className="h-4 w-4" /> <span className="mag-text">{f.label}</span>
                   {settings.showUnreadCounts && !!labelCounts[f.id] && (
                     <span className="ml-auto rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold text-primary">
@@ -1234,8 +1243,8 @@ function App() {
               ))}
               <button
                 onClick={() => { setFolder("INBOX"); setQuery(""); setActiveQuery(`label:${SNOOZE_LABEL}`); }}
-                className={`hover-mag flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm ${
-                  activeQuery.includes(SNOOZE_LABEL) ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                className={`hover-mag flex w-full items-center gap-3 rounded-full px-3 py-2 text-sm transition ${
+                  activeQuery.includes(SNOOZE_LABEL) ? "bg-primary/15 font-semibold text-foreground" : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
                 }`}
               >
                 <Clock className="h-4 w-4" /> <span className="mag-text">Snoozed</span>
@@ -1245,6 +1254,7 @@ function App() {
               </button>
 
             </nav>
+
 
             {/* Folders (user labels) */}
             <div className="mt-4">
