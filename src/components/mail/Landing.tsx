@@ -124,19 +124,19 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
 
 
   return (
-    <div className="relative min-h-screen overflow-y-auto text-foreground">
+    <div className="mesh relative min-h-screen overflow-x-hidden overflow-y-auto text-foreground">
       {/* Nav */}
       <header className="sticky top-0 z-20 px-4 pt-4">
-        <nav className="glass mx-auto flex max-w-5xl items-center gap-3 rounded-2xl px-4 py-2.5 shadow-lg">
-          <div className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
+        <nav className="pane mx-auto flex max-w-5xl items-center gap-3 px-4 py-2.5">
+          <div className="grid h-8 w-8 place-items-center rounded-2xl bg-foreground text-background">
             <Mail className="h-4 w-4" />
           </div>
-          <span className="text-sm font-semibold tracking-tight">Omni Mail</span>
+          <span className="display text-sm tracking-tight">Omni Mail</span>
           <div className="ml-auto flex items-center gap-1">
             <button
               onClick={toggleMode}
               aria-label={isLight ? "Switch to dark theme" : "Switch to light theme"}
-              className="press relative mr-1 flex h-8 w-14 items-center rounded-full border border-border/60 bg-card/50 px-1"
+              className="press pill relative mr-1 flex h-8 w-14 items-center px-1"
             >
               <span
                 className="absolute h-6 w-6 rounded-full bg-primary shadow-md transition-transform duration-300 ease-out"
@@ -145,53 +145,68 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
               <Moon className="relative z-10 h-3.5 w-3.5 text-primary-foreground" />
               <Sun className="relative z-10 ml-auto h-3.5 w-3.5 text-muted-foreground" />
             </button>
-            <Button variant="ghost" size="sm" className="gap-2" onClick={onOpenSettings}>
+            <Button variant="ghost" size="sm" className="gap-2 rounded-full" onClick={onOpenSettings}>
               <Settings className="h-3.5 w-3.5" /> Setup
             </Button>
-            <Button variant="ghost" size="sm" onClick={go} disabled={busy}>Sign in</Button>
-            <Button size="sm" className="gap-1" onClick={go} disabled={busy}>
+            <Button variant="ghost" size="sm" className="rounded-full" onClick={go} disabled={busy}>Sign in</Button>
+            <Button size="sm" className="gap-1 rounded-full px-4" onClick={go} disabled={busy}>
               Sign up <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </div>
         </nav>
       </header>
 
-      {/* Hero */}
-      <section className="reveal mx-auto max-w-4xl px-6 pb-16 pt-20 text-center">
-        <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1 text-xs text-muted-foreground">
-          <Sparkles className="h-3 w-3 animate-float text-primary" /> Powered by Gmail + Gemini
+      {/* Hero — diagonal band + oversized display word */}
+      <section className="reveal relative mx-auto max-w-6xl px-6 pb-14 pt-16 sm:pt-24">
+        <div className="diag" aria-hidden />
+        <div className="grid items-end gap-10 md:grid-cols-[1.15fr_0.85fr]">
+          <div>
+            <span className="kicker">Gmail × Gemini</span>
+            <h1 className="display-xl mt-4 text-[clamp(3.2rem,11vw,7.5rem)]">
+              OMNI
+              <span className="block text-[0.42em] font-semibold tracking-[-0.03em] text-muted-foreground">
+                email that does the work before you open it
+              </span>
+            </h1>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Button size="lg" className="gap-2 rounded-full px-7" onClick={go} disabled={busy}>
+                Sign up with Google <ArrowRight className="h-4 w-4" />
+              </Button>
+              <Button size="lg" variant="secondary" className="rounded-full px-7" onClick={go} disabled={busy}>
+                Sign in
+              </Button>
+            </div>
+            <p className="mt-4 max-w-md text-xs text-muted-foreground">
+              Free, and it runs entirely in your browser. No setup required — advanced users can add their own
+              Google Client ID in{" "}
+              <button onClick={onOpenSettings} className="underline underline-offset-2 hover:text-foreground">Setup</button>.
+            </p>
+          </div>
+
+          <div className="pane sheen p-6">
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Omni Mail sits on top of your real Gmail and adds what every other client refuses to: an
+              assistant that acts on your inbox, AI that drafts and schedules sends on a timer,
+              range-based date search, and glass you can tune pixel by pixel.
+            </p>
+            <div className="mt-5 grid grid-cols-3 gap-3 text-center">
+              {[["23", "AI products"], ["20+", "themes"], ["0", "servers touched"]].map(([n, l]) => (
+                <div key={l} className="rounded-2xl border border-border/50 bg-card/40 py-3">
+                  <div className="display text-2xl">{n}</div>
+                  <div className="mt-0.5 text-[10px] uppercase tracking-widest text-muted-foreground">{l}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-        <h1 className="text-balance text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
-          Omni Mail — email that does the work
-          <span className="block bg-gradient-to-r from-primary to-primary/50 bg-clip-text text-transparent">
-            before you open it
-          </span>
-        </h1>
-        <p className="mx-auto mt-5 max-w-2xl text-balance text-base leading-relaxed text-muted-foreground">
-          Omni Mail sits on top of your real Gmail and adds the things every other client
-          refuses to: an assistant that acts on your inbox, AI that drafts and schedules sends
-          on a timer, range-based date search, and glass you can tune pixel by pixel.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Button size="lg" className="gap-2 rounded-xl px-6" onClick={go} disabled={busy}>
-            Sign up with Google <ArrowRight className="h-4 w-4" />
-          </Button>
-          <Button size="lg" variant="secondary" className="rounded-xl px-6" onClick={go} disabled={busy}>
-            Sign in
-          </Button>
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Free, and it runs entirely in your browser. No setup required — advanced users can add their own
-          Google Client ID in{" "}
-          <button onClick={onOpenSettings} className="underline underline-offset-2 hover:text-foreground">Setup</button>.
-        </p>
       </section>
 
       {/* Interactive demo */}
       <section className="reveal mx-auto max-w-6xl px-6 pb-16">
-        <div className="mb-6 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight">Try it right here</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+        <div className="mb-6">
+          <span className="kicker">Live</span>
+          <h2 className="mt-2 text-4xl">Try it right here</h2>
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">
             A real, clickable Omni Mail. Open a message, star it, run any AI tool —
             it all works on this page before you ever sign in.
           </p>
@@ -200,6 +215,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
           <DemoInbox />
         </div>
       </section>
+
 
       {/* What others can't do */}
       <section className="reveal mx-auto max-w-5xl px-6 pb-16">
