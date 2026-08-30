@@ -84,6 +84,7 @@ export interface Settings {
   cmdBlur: number;
   sortBy: SortBy;
   layout: LayoutId;
+  surface: SurfaceStyle;
   /* Mail behaviour */
   signature: string;
   undoSendSeconds: number;
@@ -95,6 +96,8 @@ export interface Settings {
 }
 
 export type SortBy = "date" | "sender" | "unread";
+
+export type SurfaceStyle = "glass" | "material";
 
 export type LayoutId = "comfortable" | "compact" | "focus" | "wide" | "stack";
 
@@ -138,6 +141,7 @@ const defaultSettings: Settings = {
   cmdBlur: 28,
   sortBy: "date",
   layout: "comfortable",
+  surface: "glass",
   signature: "",
   undoSendSeconds: 8,
   autoAdvance: true,
