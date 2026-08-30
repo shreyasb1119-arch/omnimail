@@ -1122,3 +1122,85 @@ h1, h2, h3, .display {
 @media (prefers-reduced-motion: reduce) {
   .mesh::before { animation: none; }
 }
+
+/* ============================================================
+   IDENTITY PASS — squircle chrome, editorial type, tonal depth
+   ============================================================ */
+
+:root, [data-theme] { --radius: 1.6rem; }
+
+/* Inputs and fields become soft capsules */
+input, textarea, .rounded-md { border-radius: calc(var(--radius) - 0.5rem); }
+
+/* Panels: heavier squircle + a hairline top highlight like frosted acrylic */
+.glass, .glass-inbox, .glass-strong, .glass-cmd, .pane {
+  position: relative;
+  border-radius: calc(var(--radius) + 6px);
+}
+.glass::before, .glass-inbox::before, .glass-strong::before, .pane::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--foreground) 7%, transparent) 0%,
+    transparent 22%
+  );
+  opacity: 0.7;
+}
+
+/* Section eyebrows inside the app */
+.eyebrow {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--foreground) 45%, transparent);
+}
+
+/* ============================================================
+   SURFACE MODE — Material You (tonal, opaque, no blur)
+   ============================================================ */
+
+[data-surface="material"] {
+  --radius: 1.75rem;
+}
+
+[data-surface="material"] .glass,
+[data-surface="material"] .glass-inbox,
+[data-surface="material"] .glass-strong,
+[data-surface="material"] .glass-cmd,
+[data-surface="material"] .pane,
+[data-surface="material"] .pill {
+  backdrop-filter: none;
+  border-color: transparent;
+  background-color: color-mix(in oklab, var(--card) 100%, transparent);
+  box-shadow: none;
+}
+
+/* Tonal elevation ladder instead of glass depth */
+[data-surface="material"] .glass,
+[data-surface="material"] .pane {
+  background-color: color-mix(in oklab, var(--card) 92%, var(--primary) 8%);
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+[data-surface="material"] .glass-inbox {
+  background-color: color-mix(in oklab, var(--card) 95%, var(--primary) 5%);
+}
+[data-surface="material"] .glass-strong,
+[data-surface="material"] .glass-cmd {
+  background-color: color-mix(in oklab, var(--card) 88%, var(--primary) 12%);
+  box-shadow: 0 4px 14px color-mix(in oklab, var(--foreground) 16%, transparent);
+}
+[data-surface="material"] .pill {
+  background-color: color-mix(in oklab, var(--card) 90%, var(--primary) 10%);
+}
+[data-surface="material"] .glass::before,
+[data-surface="material"] .glass-inbox::before,
+[data-surface="material"] .glass-strong::before,
+[data-surface="material"] .pane::before,
+[data-surface="material"] .sheen::after { display: none; }
+[data-surface="material"] .mesh::before { opacity: 0.35; filter: blur(40px); }
+[data-surface="material"] .app-wallpaper { opacity: 0.35; }
