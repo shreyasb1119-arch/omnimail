@@ -219,8 +219,8 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
 
       {/* What others can't do */}
       <section className="reveal mx-auto max-w-5xl px-6 pb-16">
-        <div className="glass rounded-3xl p-8 shadow-xl">
-          <h2 className="text-2xl font-semibold tracking-tight">What other email apps can't do</h2>
+        <div className="pane sheen p-8">
+          <h2 className="text-3xl">What other email apps can't do</h2>
           <ul className="mt-5 grid gap-3 sm:grid-cols-2">
             {VS_OTHERS.map((t) => (
               <li key={t} className="flex gap-2.5 rounded-xl border border-border/50 bg-card/40 p-4 text-sm text-muted-foreground">
@@ -234,9 +234,9 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
 
       {/* Bring your other inboxes */}
       <section className="reveal mx-auto max-w-5xl px-6 pb-16">
-        <div className="glass grid gap-6 rounded-3xl p-8 shadow-xl md:grid-cols-2 md:items-center">
+        <div className="pane sheen grid gap-6 p-8 md:grid-cols-2 md:items-center">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Outlook, Proton, iCloud — all in one place</h2>
+            <h2 className="text-3xl">Outlook, Proton, iCloud — all in one place</h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
               Omni Mail reads whatever your Google account can reach, so any address you attach to Gmail shows up
               here with every AI tool applied to it. Add Outlook, Yahoo or any IMAP account under Gmail's
@@ -254,7 +254,7 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             {["Outlook", "Proton", "iCloud", "Yahoo", "Any IMAP", "Google Workspace"].map((n) => (
-              <div key={n} className="lift rounded-2xl border border-border/50 bg-card/40 p-4 text-center text-xs font-medium">
+              <div key={n} className="pill lift p-4 text-center text-xs font-medium">
                 {n}
               </div>
             ))}
@@ -265,9 +265,9 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
       {/* Date range highlight */}
 
       <section className="reveal mx-auto max-w-5xl px-6 pb-16">
-        <div className="glass grid gap-6 rounded-3xl p-8 shadow-xl md:grid-cols-2 md:items-center">
+        <div className="pane sheen grid gap-6 p-8 md:grid-cols-2 md:items-center">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Type a date. Or two.</h2>
+            <h2 className="text-3xl">Type a date. Or two.</h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
               The search bar understands raw dates, so you never have to remember Gmail's
               <code className="mx-1 rounded bg-card/60 px-1">before:</code> syntax again.
@@ -292,13 +292,13 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
 
       {/* AI features */}
       <section className="reveal mx-auto max-w-6xl px-6 pb-16">
-        <div className="mb-6 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight">Forty AI features, grouped so you can find them</h2>
+        <div className="mb-6">
+          <h2 className="text-4xl">Forty AI features, grouped so you can find them</h2>
           <p className="mt-2 text-sm text-muted-foreground">Every one of them works on your live mail.</p>
         </div>
         <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {AI_FEATURES.map((f) => (
-            <div key={f.title} className="glass lift animate-in-up rounded-2xl p-5 shadow-lg">
+            <div key={f.title} className="pane lift animate-in-up p-5">
               <div className="mb-3 grid h-9 w-9 place-items-center rounded-xl bg-primary/15 text-primary">
                 <f.icon className="h-4 w-4" />
               </div>
@@ -315,12 +315,12 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
 
       {/* Core features */}
       <section className="reveal mx-auto max-w-6xl px-6 pb-16">
-        <div className="mb-6 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight">And the fundamentals, done properly</h2>
+        <div className="mb-6">
+          <h2 className="text-4xl">And the fundamentals, done properly</h2>
         </div>
         <div className="stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {CORE_FEATURES.map((f) => (
-            <div key={f.title} className="press rounded-2xl border border-border/50 bg-card/40 p-4 hover:border-primary/50">
+            <div key={f.title} className="press rounded-2xl border border-border/50 bg-card/40 p-4 backdrop-blur-md hover:border-primary/50">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <f.icon className="h-4 w-4 text-primary" /> {f.title}
               </div>
@@ -332,11 +332,11 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
 
       {/* Inbox Zero article */}
       <section className="reveal mx-auto max-w-3xl px-6 pb-16">
-        <article className="glass rounded-3xl p-8 shadow-xl">
+        <article className="pane sheen p-8">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1 text-xs text-muted-foreground">
             <ListChecks className="h-3 w-3 text-primary" /> Guide
           </div>
-          <h2 className="text-3xl font-semibold tracking-tight">How to reach inbox zero — and stay there</h2>
+          <h2 className="text-4xl">How to reach inbox zero — and stay there</h2>
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
             Inbox zero was never about an empty mailbox. It is about an inbox that only holds what still
             needs you. Most people fail at it because they treat every message as a decision to make
@@ -394,8 +394,8 @@ export function Landing({ onOpenSettings }: { onOpenSettings: () => void }) {
 
       {/* CTA */}
       <section className="reveal mx-auto max-w-3xl px-6 pb-20">
-        <div className="glass-strong rounded-3xl p-10 text-center shadow-2xl">
-          <h2 className="text-2xl font-semibold tracking-tight">Your inbox, finally quiet</h2>
+        <div className="pane sheen p-10 text-center">
+          <h2 className="text-3xl">Your inbox, finally quiet</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
             Sign in with Google and you'll stay signed in — tokens refresh silently in the background.
           </p>
