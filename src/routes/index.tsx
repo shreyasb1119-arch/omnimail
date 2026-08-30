@@ -1116,7 +1116,7 @@ function App() {
     <TooltipProvider delayDuration={200}>
       <ThemeApplier />
       <Toaster position="top-right" richColors />
-      <div className="relative flex h-screen w-screen flex-col overflow-hidden p-3 text-foreground">
+      <div className="mesh relative flex h-screen w-screen flex-col overflow-hidden p-3 text-foreground">
         {/* Dynamic island — hidden until the pointer reaches the top edge */}
         <div className={`island-nub ${islandShown ? "is-hidden" : ""}`} aria-hidden="true" />
         <div
@@ -1194,7 +1194,7 @@ function App() {
           {L.sidebar !== "hidden" && (
           <aside className={`glass no-scrollbar flex shrink-0 flex-col overflow-y-auto rounded-2xl px-3 py-4 shadow-xl ${L.sidebar}`}>
             <div className="mb-5 flex items-center gap-2.5 px-1">
-              <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground shadow-md">
+              <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-2xl bg-foreground text-background shadow-md">
                 {avatarSrc ? (
                   <img src={avatarSrc} alt="Your avatar" className="h-full w-full object-cover" />
                 ) : (
