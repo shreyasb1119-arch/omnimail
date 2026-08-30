@@ -89,10 +89,11 @@ export function ThemeApplier() {
     root.style.setProperty("--wallpaper-blur", String(s.wallpaperBlur));
     root.style.setProperty("--cmd-opacity", String(s.cmdOpacity));
     root.style.setProperty("--cmd-blur", String(s.cmdBlur));
+    root.dataset.surface = s.surface || "glass";
     // Favicon follows the theme accent.
     const id = window.requestAnimationFrame(() => paintFavicon());
     return () => window.cancelAnimationFrame(id);
-  }, [s.theme, s.customBg, s.customFg, s.customPrimary, s.panelOpacity, s.panelBlur, s.inboxOpacity, s.inboxBlur, s.wallpaperOpacity, s.wallpaperBlur, s.cmdOpacity, s.cmdBlur]);
+  }, [s.theme, s.customBg, s.customFg, s.customPrimary, s.panelOpacity, s.panelBlur, s.inboxOpacity, s.inboxBlur, s.wallpaperOpacity, s.wallpaperBlur, s.cmdOpacity, s.cmdBlur, s.surface]);
   return (
     <>
       <div className="app-wallpaper-dim" />
