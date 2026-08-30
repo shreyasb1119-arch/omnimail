@@ -1486,10 +1486,18 @@ function App() {
                   <div
                     key={m.id}
                     onClick={() => { setCursorIndex(i); openMessage(m.id); }}
-                    className={`animate-in-up hover-mag group mx-2 mb-1.5 flex cursor-pointer gap-2 rounded-xl border border-border/40 px-3 ${L.row} ${
-                      isOpen ? "bg-accent/60" : isCursor ? "bg-accent/30" : "bg-card/20 hover:bg-accent/20"
+                    className={`animate-in-up hover-mag group relative mx-2 mb-2 flex cursor-pointer gap-3 overflow-hidden rounded-[calc(var(--radius)-0.35rem)] border px-3 ${L.row} ${
+                      isOpen
+                        ? "border-primary/40 bg-primary/10"
+                        : isCursor
+                          ? "border-border/60 bg-accent/25"
+                          : "border-border/35 bg-card/25 hover:border-primary/25 hover:bg-accent/20"
                     }`}
                   >
+                    {m.unread && (
+                      <span className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-primary" aria-hidden />
+                    )}
+
                     <div className="flex flex-col items-center gap-2 pt-0.5">
                       <Checkbox
                         checked={isSel}
