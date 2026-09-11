@@ -1783,14 +1783,8 @@ function App() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!scan} onOpenChange={(o) => !o && setScan(null)}>
-        <DialogContent className="glass-strong max-w-lg rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> {scan?.title}</DialogTitle>
-          </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">{scan?.text}</div>
-        </DialogContent>
-      </Dialog>
+      <AiResultDialog scan={scan} onClose={() => setScan(null)} />
+
 
       <Dialog open={queueOpen} onOpenChange={setQueueOpen}>
         <DialogContent className="glass-strong max-w-lg rounded-2xl">
