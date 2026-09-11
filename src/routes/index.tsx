@@ -52,6 +52,8 @@ import { Compose, type ComposeInitial } from "@/components/mail/Compose";
 import { CommandPalette, type Cmd } from "@/components/mail/CommandPalette";
 import { AiAssistant } from "@/components/mail/AiAssistant";
 import { Landing } from "@/components/mail/Landing";
+import { AiResultDialog } from "@/components/mail/AiResultDialog";
+
 
 const LAYOUT_CONF: Record<string, { sidebar: string; list: string; row: string }> = {
   comfortable: { sidebar: "w-64", list: "w-[420px]", row: "py-3" },
