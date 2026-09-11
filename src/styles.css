@@ -1204,3 +1204,125 @@ input, textarea, .rounded-md { border-radius: calc(var(--radius) - 0.5rem); }
 [data-surface="material"] .sheen::after { display: none; }
 [data-surface="material"] .mesh::before { opacity: 0.35; filter: blur(40px); }
 [data-surface="material"] .app-wallpaper { opacity: 0.35; }
+
+/* ============================================================
+   SIGNATURE PASS — deep glass, optical grain, hand-tuned motion
+   Everything below is scoped so Material You stays flat.
+   ============================================================ */
+
+:root, [data-theme] {
+  --radius: 1.9rem;
+  --edge-hi: color-mix(in oklab, white 42%, transparent);
+  --edge-lo: color-mix(in oklab, var(--foreground) 16%, transparent);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.32, 0.44, 1);
+  --shadow-deep:
+    0 1px 0 var(--edge-hi) inset,
+    0 2px 6px -2px color-mix(in oklab, var(--foreground) 14%, transparent),
+    0 22px 48px -20px color-mix(in oklab, var(--foreground) 34%, transparent),
+    0 64px 120px -60px color-mix(in oklab, var(--foreground) 44%, transparent);
+}
+.dark, [data-theme] .dark { --edge-hi: color-mix(in oklab, white 16%, transparent); }
+
+/* Type: tighter optical rhythm, real hierarchy */
+body { letter-spacing: -0.014em; line-height: 1.55; font-feature-settings: "ss01", "cv01"; }
+h1, h2, h3, .display, .display-xl { letter-spacing: -0.045em; }
+.eyebrow, .kicker { letter-spacing: 0.3em; }
+
+/* Fine film grain over the whole app — kills the flat "generated" look */
+.grain { position: relative; }
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.35;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+}
+
+/* Deep glass: real material, layered light, curved edge */
+html:not([data-surface="material"]) .glass,
+html:not([data-surface="material"]) .glass-inbox,
+html:not([data-surface="material"]) .glass-strong,
+html:not([data-surface="material"]) .glass-cmd,
+html:not([data-surface="material"]) .pane {
+  backdrop-filter: blur(calc(var(--panel-blur, 24) * 1.6px)) saturate(190%) brightness(1.04);
+  -webkit-backdrop-filter: blur(calc(var(--panel-blur, 24) * 1.6px)) saturate(190%) brightness(1.04);
+  box-shadow: var(--shadow-deep);
+  border: 1px solid var(--edge-lo);
+}
+html:not([data-surface="material"]) .glass-inbox {
+  backdrop-filter: blur(calc(var(--inbox-blur, 20) * 1.6px)) saturate(190%) brightness(1.03);
+  -webkit-backdrop-filter: blur(calc(var(--inbox-blur, 20) * 1.6px)) saturate(190%) brightness(1.03);
+}
+html:not([data-surface="material"]) .glass-cmd {
+  backdrop-filter: blur(calc(var(--cmd-blur, 28) * 1.7px)) saturate(200%);
+  -webkit-backdrop-filter: blur(calc(var(--cmd-blur, 28) * 1.7px)) saturate(200%);
+}
+
+/* Curved specular rim instead of the flat top-gradient */
+html:not([data-surface="material"]) .glass::before,
+html:not([data-surface="material"]) .glass-inbox::before,
+html:not([data-surface="material"]) .glass-strong::before,
+html:not([data-surface="material"]) .pane::before {
+  background:
+    linear-gradient(180deg, var(--edge-hi) 0%, transparent 14%),
+    radial-gradient(120% 60% at 50% -12%, color-mix(in oklab, var(--primary) 14%, transparent), transparent 60%);
+  opacity: 0.85;
+}
+
+/* Panels breathe: a slow settle on mount */
+@keyframes pane-settle {
+  from { opacity: 0; transform: translateY(10px) scale(0.988); filter: blur(6px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+.glass, .glass-inbox, .glass-strong, .pane { animation: pane-settle 520ms var(--ease-out) both; }
+
+/* Rows: separated cards with a live accent edge */
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.row-card {
+  position: relative;
+  transition: transform 300ms var(--ease-out), background-color 220ms ease, box-shadow 300ms var(--ease-out);
+}
+.row-card:hover { transform: translateX(3px); }
+
+/* Controls: capsule press physics */
+button, .pill { transition: transform 200ms var(--ease-spring), background-color 200ms ease, color 200ms ease, border-color 200ms ease, box-shadow 260ms var(--ease-out); }
+button:active { transform: scale(0.97); }
+
+/* Focus that looks designed, not default */
+:where(input, textarea, button, [role="button"]):focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 4px color-mix(in oklab, var(--primary) 65%, transparent);
+}
+
+/* Selection + caret pick up the accent */
+::selection { background: color-mix(in oklab, var(--primary) 30%, transparent); }
+input, textarea { caret-color: var(--primary); }
+
+/* Ambient light gets richer and slower */
+html:not([data-surface="material"]) .mesh::before {
+  filter: blur(28px) saturate(140%);
+  opacity: 1;
+  animation-duration: 38s;
+}
+
+/* Softer, quieter scrollbars where they do show */
+* { scrollbar-color: color-mix(in oklab, var(--foreground) 18%, transparent) transparent; scrollbar-width: thin; }
+
+/* Skeleton shimmer for pending AI/loading states */
+@keyframes breathe { 0%, 100% { opacity: 0.45 } 50% { opacity: 0.85 } }
+.breathe { animation: breathe 1.8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .glass, .glass-inbox, .glass-strong, .pane { animation: none; }
+}
+
