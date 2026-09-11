@@ -449,6 +449,7 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
             </div>
           </section>
         </div>
+        </div>
       </aside>
     </div>,
     document.body,
