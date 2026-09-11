@@ -1118,7 +1118,7 @@ function App() {
     <TooltipProvider delayDuration={200}>
       <ThemeApplier />
       <Toaster position="top-right" richColors />
-      <div className="mesh relative flex h-screen w-screen flex-col overflow-hidden p-3 text-foreground">
+      <div className="mesh grain relative flex h-screen w-screen flex-col overflow-hidden p-3 text-foreground">
         {/* Dynamic island — hidden until the pointer reaches the top edge */}
         <div className={`island-nub ${islandShown ? "is-hidden" : ""}`} aria-hidden="true" />
         <div
