@@ -1134,8 +1134,14 @@ input, textarea, .rounded-md { border-radius: calc(var(--radius) - 0.5rem); }
 
 /* Panels: heavier squircle + a hairline top highlight like frosted acrylic */
 .glass, .glass-inbox, .glass-strong, .glass-cmd, .pane {
-  position: relative;
   border-radius: calc(var(--radius) + 6px);
+}
+.glass:not(.fixed):not(.absolute):not(.sticky),
+.glass-inbox:not(.fixed):not(.absolute):not(.sticky),
+.glass-strong:not(.fixed):not(.absolute):not(.sticky),
+.glass-cmd:not(.fixed):not(.absolute):not(.sticky),
+.pane:not(.fixed):not(.absolute):not(.sticky) {
+  position: relative;
 }
 .glass::before, .glass-inbox::before, .glass-strong::before, .pane::before {
   content: "";
