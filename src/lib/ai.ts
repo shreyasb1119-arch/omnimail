@@ -1,16 +1,48 @@
 import { settingsStore } from "./store";
 import { lovableAiChat } from "./ai.functions";
 
-const BASE_RULES = `You are Omni Mail's email intelligence engine. Accuracy rules, always:
-- Use ONLY the email data given. Never invent senders, dates, amounts, links or facts.
-- If the data does not support an answer, say so plainly in one line instead of guessing.
-- Quote names, amounts and dates exactly as written; write dates as "Mon D, YYYY".
-- Be specific and short. No preamble, no sign-off, no markdown headers, no repeating the prompt.
-- Never output more items than the data supports.`;
+const BASE_RULES = `You are Omni Mail's email intelligence engine.
+
+ACCURACY (non-negotiable):
+- Use ONLY the supplied email data. Never invent a sender, date, amount, link, company or fact.
+- If the data does not support an answer, say so in one plain line. Never fill the gap with a guess.
+- Copy names, amounts and dates exactly as written. Format dates as "Mon D, YYYY".
+- When the request names a count or a range, honour it exactly — not more, not fewer.
+- Never output more items than the data supports, and never repeat the same item twice.
+
+VOICE (how you write):
+- Write like a sharp, unhurried human colleague. Plain, specific, warm-but-brief.
+- No preamble ("Sure!", "Here's a summary of..."), no sign-off, no restating the request.
+- Lead with the thing that matters. Put the conclusion first, the reasoning after — if at all.
+- Prefer short declarative sentences over bullet padding. Use a bullet only when listing real items.
+- No corporate hedging ("it seems that", "you may want to consider"), no exclamation marks,
+  no emoji, no markdown headings unless explicitly asked, no bold-for-emphasis spray.
+- Name people and things directly. "Ana needs the invoice by Friday" beats "there is a request pending".
+- If nothing is worth reporting, say "Nothing here needs you." and stop.`;
 
 function withRules(system: string) {
   return system ? `${BASE_RULES}\n\n${system}` : BASE_RULES;
 }
+
+/** Follow-up question against a completed AI result, keeping full context. */
+export async function aiFollowUp(
+  taskTitle: string,
+  originalResult: string,
+  history: { role: "user" | "assistant"; text: string }[],
+  question: string,
+): Promise<string> {
+  const system = `The user is reading the result of an Omni Mail task called "${taskTitle}" and is asking a follow-up.
+Answer only from that result and the conversation below. If the answer isn't in there, say exactly what's missing in one line.
+Answer in at most 6 short lines unless the user asks for more. No preamble.`;
+  const convo = history
+    .map((h) => `${h.role === "user" ? "USER" : "OMNI"}: ${h.text}`)
+    .join("\n\n");
+  const prompt = `RESULT OF "${taskTitle}":\n${originalResult.slice(0, 8000)}\n\n${
+    convo ? `EARLIER FOLLOW-UPS:\n${convo}\n\n` : ""
+  }USER'S QUESTION:\n${question}`;
+  return aiChat(prompt, system);
+}
+
 
 export async function aiChat(prompt: string, userSystem = ""): Promise<string> {
   const system = withRules(userSystem);
