@@ -1487,7 +1487,7 @@ function App() {
                   <div
                     key={m.id}
                     onClick={() => { setCursorIndex(i); openMessage(m.id); }}
-                    className={`animate-in-up hover-mag group relative mx-2 mb-2 flex cursor-pointer gap-3 overflow-hidden rounded-[calc(var(--radius)-0.35rem)] border px-3 ${L.row} ${
+                    className={`animate-in-up row-card hover-mag group relative mx-2 mb-2 flex cursor-pointer gap-3 overflow-hidden rounded-[calc(var(--radius)-0.35rem)] border px-3 ${L.row} ${
                       isOpen
                         ? "border-primary/40 bg-primary/10"
                         : isCursor
