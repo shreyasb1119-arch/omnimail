@@ -1196,9 +1196,8 @@ function App() {
           {L.sidebar !== "hidden" && (
           <aside className={`glass no-scrollbar flex shrink-0 flex-col overflow-y-auto rounded-2xl px-3 py-4 shadow-xl ${L.sidebar}`}>
             <div className="mb-4 px-1">
-              <div className="display-xl text-[2rem] leading-none">OMNI</div>
-              <div className="eyebrow mt-1">mail</div>
-              <div className="mt-3 flex items-center gap-2.5 rounded-full border border-border/50 bg-card/40 p-1 pr-3">
+              <div className="flex items-center gap-2.5 rounded-full border border-border/50 bg-card/40 p-1 pr-3">
+
                 <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-foreground text-background">
                   {avatarSrc ? (
                     <img src={avatarSrc} alt="Your avatar" className="h-full w-full object-cover" />
