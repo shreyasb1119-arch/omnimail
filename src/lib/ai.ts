@@ -212,7 +212,12 @@ Rules:
 - If the user wants an email SENT LATER ("send X in 10 minutes", "email bob in an hour"), emit a single
   {"type":"schedule"} action: write the full subject and body yourself, set "delayMs" to the delay in
   milliseconds, and "when" to a human phrase like "in 10 minutes".
-- "reply" is one short sentence. Return valid JSON only, no markdown fences.`;
+- Sender filters ("from LinkedIn", "newsletters") match case-insensitively anywhere in the from field;
+  include every position that matches, and no position that doesn't.
+- Before returning, re-count your "n" array against the number the user asked for. If it doesn't match, fix it.
+- Never merge two different verbs into one action; emit one action per verb.
+- "reply" is one short sentence, plain and specific. Return valid JSON only, no markdown fences.`;
+
 
   const list = context
     .map(
