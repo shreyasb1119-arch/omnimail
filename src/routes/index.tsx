@@ -52,6 +52,8 @@ import { Compose, type ComposeInitial } from "@/components/mail/Compose";
 import { CommandPalette, type Cmd } from "@/components/mail/CommandPalette";
 import { AiAssistant } from "@/components/mail/AiAssistant";
 import { Landing } from "@/components/mail/Landing";
+import { AiResultDialog } from "@/components/mail/AiResultDialog";
+
 
 const LAYOUT_CONF: Record<string, { sidebar: string; list: string; row: string }> = {
   comfortable: { sidebar: "w-64", list: "w-[420px]", row: "py-3" },
@@ -1116,7 +1118,7 @@ function App() {
     <TooltipProvider delayDuration={200}>
       <ThemeApplier />
       <Toaster position="top-right" richColors />
-      <div className="mesh relative flex h-screen w-screen flex-col overflow-hidden p-3 text-foreground">
+      <div className="mesh grain relative flex h-screen w-screen flex-col overflow-hidden p-3 text-foreground">
         {/* Dynamic island — hidden until the pointer reaches the top edge */}
         <div className={`island-nub ${islandShown ? "is-hidden" : ""}`} aria-hidden="true" />
         <div
@@ -1194,9 +1196,8 @@ function App() {
           {L.sidebar !== "hidden" && (
           <aside className={`glass no-scrollbar flex shrink-0 flex-col overflow-y-auto rounded-2xl px-3 py-4 shadow-xl ${L.sidebar}`}>
             <div className="mb-4 px-1">
-              <div className="display-xl text-[2rem] leading-none">OMNI</div>
-              <div className="eyebrow mt-1">mail</div>
-              <div className="mt-3 flex items-center gap-2.5 rounded-full border border-border/50 bg-card/40 p-1 pr-3">
+              <div className="flex items-center gap-2.5 rounded-full border border-border/50 bg-card/40 p-1 pr-3">
+
                 <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-foreground text-background">
                   {avatarSrc ? (
                     <img src={avatarSrc} alt="Your avatar" className="h-full w-full object-cover" />
@@ -1486,7 +1487,7 @@ function App() {
                   <div
                     key={m.id}
                     onClick={() => { setCursorIndex(i); openMessage(m.id); }}
-                    className={`animate-in-up hover-mag group relative mx-2 mb-2 flex cursor-pointer gap-3 overflow-hidden rounded-[calc(var(--radius)-0.35rem)] border px-3 ${L.row} ${
+                    className={`animate-in-up row-card hover-mag group relative mx-2 mb-2 flex cursor-pointer gap-3 overflow-hidden rounded-[calc(var(--radius)-0.35rem)] border px-3 ${L.row} ${
                       isOpen
                         ? "border-primary/40 bg-primary/10"
                         : isCursor
@@ -1783,14 +1784,8 @@ function App() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!scan} onOpenChange={(o) => !o && setScan(null)}>
-        <DialogContent className="glass-strong max-w-lg rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> {scan?.title}</DialogTitle>
-          </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">{scan?.text}</div>
-        </DialogContent>
-      </Dialog>
+      <AiResultDialog scan={scan} onClose={() => setScan(null)} />
+
 
       <Dialog open={queueOpen} onOpenChange={setQueueOpen}>
         <DialogContent className="glass-strong max-w-lg rounded-2xl">
