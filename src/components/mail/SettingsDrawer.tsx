@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,25 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
   const sync = useSyncState();
   const [clientId, setClientId] = useState(s.clientId);
   const [geminiKey, setGeminiKey] = useState(s.geminiKey);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!open) return;
+    setClientId(s.clientId);
+    setGeminiKey(s.geminiKey);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onOpenChange(false);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, onOpenChange, s.clientId, s.geminiKey]);
 
   const save = () => {
     settingsStore.set({ clientId: clientId.trim(), geminiKey: geminiKey.trim() });
@@ -35,12 +55,27 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
   };
 
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[420px] sm:max-w-[420px] glass-strong overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>Settings</SheetTitle>
-        </SheetHeader>
+  if (!mounted || !open) return null;
+
+  return createPortal(
+    <div className="settings-overlay" role="presentation" onMouseDown={() => onOpenChange(false)}>
+      <aside
+        aria-label="Settings"
+        aria-modal="true"
+        role="dialog"
+        className="settings-panel glass-strong"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header className="settings-panel-header">
+          <div>
+            <p className="eyebrow">Omni Mail</p>
+            <h2 className="text-xl font-semibold text-foreground">Settings</h2>
+          </div>
+          <Button variant="ghost" size="icon" aria-label="Close settings" onClick={() => onOpenChange(false)}>
+            <X className="h-5 w-5" />
+          </Button>
+        </header>
+        <div className="settings-panel-body no-scrollbar">
         <div className="mt-6 space-y-6 pr-1">
           <section className="space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Google Account</h3>
@@ -414,7 +449,8 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
             </div>
           </section>
         </div>
-      </SheetContent>
-    </Sheet>
+      </aside>
+    </div>,
+    document.body,
   );
 }
