@@ -35,6 +35,12 @@ export function useSyncState() {
 function syncable(s: Settings) {
   const out: Record<string, unknown> = { ...s };
   LOCAL_ONLY.forEach((k) => delete out[k as string]);
+  IMAGE_FIELDS.forEach((k) => {
+    const v = out[k as string];
+    if (typeof v === "string" && (v.startsWith("data:") || v.length > MAX_SYNCED_STRING)) {
+      delete out[k as string];
+    }
+  });
   return out;
 }
 
