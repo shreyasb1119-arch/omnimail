@@ -27,17 +27,30 @@ export async function verifyGoogleCaller(
   accessToken: unknown,
 ): Promise<{ sub: string; email: string | null }> {
   if (typeof accessToken !== "string" || accessToken.length < 20 || accessToken.length > 4096) {
-    throw new Error("Unauthorized");
+    throw new SessionExpiredError();
   }
-  const r = await fetch(
-    `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`,
-  );
-  if (!r.ok) throw new Error("Unauthorized");
-  const info = (await r.json()) as TokenInfo;
-  if (!info.sub) throw new Error("Unauthorized");
+
+  // The client may hold either an OAuth access token or an ID token; accept both.
+  const params = [`access_token=${encodeURIComponent(accessToken)}`];
+  if (accessToken.split(".").length === 3) params.unshift(`id_token=${encodeURIComponent(accessToken)}`);
+
+  let info: TokenInfo | null = null;
+  for (const p of params) {
+    const r = await fetch(`https://oauth2.googleapis.com/tokeninfo?${p}`);
+    if (!r.ok) continue;
+    const parsed = (await r.json()) as TokenInfo;
+    if (parsed.sub) {
+      info = parsed;
+      break;
+    }
+  }
+  // An expired/invalid token is a normal, recoverable state — not a server fault.
+  if (!info?.sub) throw new SessionExpiredError();
 
   const expectedAud = process.env['GOOGLE_OAUTH_CLIENT_ID'];
-  if (expectedAud && info.aud !== expectedAud) throw new Error("Unauthorized");
+  if (expectedAud && info.aud !== expectedAud && info.azp !== expectedAud) {
+    throw new SessionExpiredError();
+  }
 
   return { sub: info.sub, email: info.email ?? null };
 }
