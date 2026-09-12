@@ -61,12 +61,83 @@ async function fetchProfile(accessToken: string) {
   return r.json();
 }
 
-export async function signIn(interactive = true): Promise<AuthSession> {
-  const clientId = await resolveClientId();
-  if (!clientId) throw new Error("No Google OAuth Client ID is configured. Add one in Settings.");
+/* ------------------------------------------------------------------ *
+ * Long-lived sessions
+ *
+ * With the app's built-in Google credentials we can use the code flow, which
+ * gives the server a refresh token. The browser keeps only an opaque device
+ * token, so people stay signed in for weeks instead of one hour.
+ * Users who bring their own Client ID fall back to the plain browser flow.
+ * ------------------------------------------------------------------ */
+
+const DEVICE_KEY = "omni.device";
+
+function getDeviceToken(): string | null {
+  try {
+    return localStorage.getItem(DEVICE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setDeviceToken(t: string | null) {
+  try {
+    if (t) localStorage.setItem(DEVICE_KEY, t);
+    else localStorage.removeItem(DEVICE_KEY);
+  } catch {
+    /* private mode: sessions just won't persist */
+  }
+}
+
+/** True when we're on the app's own credentials, which have a server secret. */
+function usesBuiltInClient(): boolean {
+  return !settingsStore.get().clientId.trim();
+}
+
+function sessionFrom(accessToken: string, expiresIn: number, scope: string, profile: any): AuthSession {
+  return {
+    accessToken,
+    expiresAt: Date.now() + (expiresIn - 60) * 1000,
+    scope,
+    profile: {
+      email: profile.email,
+      name: profile.name || profile.email,
+      picture: profile.picture || "",
+    },
+  };
+}
+
+/** Popup code flow: the server ends up holding the refresh token. */
+async function signInWithCode(clientId: string): Promise<AuthSession> {
   await loadGis();
+  const code = await new Promise<string>((resolve, reject) => {
+    const codeClient = window.google.accounts.oauth2.initCodeClient({
+      client_id: clientId,
+      scope: GMAIL_SCOPES,
+      ux_mode: "popup",
+      // Required for Google to hand back a refresh token.
+      access_type: "offline",
+      prompt: "consent",
+      callback: (resp: any) => {
+        if (resp.error || !resp.code) reject(new Error(resp.error_description || resp.error || "Sign-in cancelled"));
+        else resolve(resp.code);
+      },
+      error_callback: (e: any) => reject(new Error(e?.message || "Sign-in cancelled")),
+    });
+    codeClient.requestCode();
+  });
 
+  const { exchangeGoogleCode } = await import("./goauth.functions");
+  const r = await exchangeGoogleCode({ data: { code } });
+  setDeviceToken(r.deviceToken);
+  const profile = await fetchProfile(r.accessToken);
+  const session = sessionFrom(r.accessToken, r.expiresIn, r.scope, profile);
+  sessionStore.replace(session);
+  return session;
+}
 
+/** Classic in-browser token flow, used for user-supplied Client IDs. */
+function signInWithToken(clientId: string, interactive: boolean): Promise<AuthSession> {
   return new Promise<AuthSession>((resolve, reject) => {
     const tokenClient = window.google.accounts.oauth2.initTokenClient({
       client_id: clientId,
@@ -79,16 +150,7 @@ export async function signIn(interactive = true): Promise<AuthSession> {
         }
         try {
           const profile = await fetchProfile(resp.access_token);
-          const session: AuthSession = {
-            accessToken: resp.access_token,
-            expiresAt: Date.now() + (Number(resp.expires_in) - 60) * 1000,
-            scope: resp.scope,
-            profile: {
-              email: profile.email,
-              name: profile.name || profile.email,
-              picture: profile.picture || "",
-            },
-          };
+          const session = sessionFrom(resp.access_token, Number(resp.expires_in), resp.scope, profile);
           sessionStore.replace(session);
           resolve(session);
         } catch (e) {
@@ -101,11 +163,32 @@ export async function signIn(interactive = true): Promise<AuthSession> {
   });
 }
 
-// Silent refresh: try to renew without a consent popup.
+export async function signIn(interactive = true): Promise<AuthSession> {
+  const clientId = await resolveClientId();
+  if (!clientId) throw new Error("No Google OAuth Client ID is configured. Add one in Settings.");
+  await loadGis();
+  if (interactive && usesBuiltInClient()) return signInWithCode(clientId);
+  return signInWithToken(clientId, interactive);
+}
+
+/** Renews the session without any popup. */
 export async function refreshSilently(): Promise<AuthSession | null> {
+  const device = getDeviceToken();
+  if (device) {
+    try {
+      const { refreshGoogleSession } = await import("./goauth.functions");
+      const r = await refreshGoogleSession({ data: { deviceToken: device } });
+      const prev = sessionStore.get();
+      const profile = prev?.profile ?? (await fetchProfile(r.accessToken));
+      const session = sessionFrom(r.accessToken, r.expiresIn, r.scope, profile);
+      sessionStore.replace(session);
+      return session;
+    } catch {
+      setDeviceToken(null);
+    }
+  }
   try {
-    const sess = await signIn(false);
-    return sess;
+    return await signIn(false);
   } catch {
     return null;
   }
@@ -113,12 +196,24 @@ export async function refreshSilently(): Promise<AuthSession | null> {
 
 export function signOut() {
   const s = sessionStore.get();
+  const device = getDeviceToken();
+  if (device) {
+    import("./goauth.functions")
+      .then(({ endGoogleSession }) => endGoogleSession({ data: { deviceToken: device } }))
+      .catch(() => {});
+    setDeviceToken(null);
+  }
   if (s?.accessToken && window.google?.accounts?.oauth2) {
     try {
       window.google.accounts.oauth2.revoke(s.accessToken, () => {});
     } catch {}
   }
   sessionStore.replace(null);
+}
+
+/** True when a stored session can be restored without user interaction. */
+export function hasPersistentSession(): boolean {
+  return !!getDeviceToken();
 }
 
 // Wraps a Gmail API call, refreshing on 401.
