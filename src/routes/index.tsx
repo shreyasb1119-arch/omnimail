@@ -213,7 +213,7 @@ function App() {
     (async () => {
       if (session) return;
       const raw = localStorage.getItem("shreyas-mail:session");
-      if (!raw || !settings.clientId) return;
+      if (!raw && !hasPersistentSession()) return;
       await loadGis();
       const r = await refreshSilently();
       if (!r) sessionStore.replace(null);
@@ -223,7 +223,7 @@ function App() {
 
   // Stay signed in "forever": proactive silent refresh + refresh on tab focus.
   useEffect(() => {
-    if (!session || !settings.clientId) return;
+    if (!session) return;
     const renew = async () => {
       const s = sessionStore.get();
       if (!s) return;
