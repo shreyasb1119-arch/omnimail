@@ -7,7 +7,8 @@ export const lovableAiChat = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => {
     const d = data as { system?: string; prompt?: string; accessToken?: string };
     if (!d || typeof d.prompt !== "string" || !d.prompt.trim()) throw new Error("prompt required");
-    if (typeof d.accessToken !== "string") throw new Error("Unauthorized");
+    if (typeof d.accessToken !== "string" || !d.accessToken)
+      throw new Error("Sign in with Google to use AI features.");
     if (d.prompt.length > MAX_PROMPT) throw new Error("Request too large");
     const system = typeof d.system === "string" ? d.system.slice(0, MAX_SYSTEM) : "";
     return { system, prompt: d.prompt, accessToken: d.accessToken };
