@@ -20,8 +20,13 @@ const DENY_KEYS = new Set([
   "secret",
 ]);
 
+/** Hard ceiling before parsing, so a huge body never reaches JSON.parse. */
+const MAX_RAW_BYTES = 8 * 1024 * 1024;
+/** Inline images (data: URLs) are device-local and never worth syncing. */
+const MAX_STRING_BYTES = 8 * 1024;
+
 function sanitize(raw: string): Record<string, unknown> {
-  if (raw.length > MAX_SETTINGS_BYTES) throw new Error("Settings payload too large");
+  if (raw.length > MAX_RAW_BYTES) throw new Error("Your settings are too large to sync.");
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -35,7 +40,12 @@ function sanitize(raw: string): Record<string, unknown> {
   for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
     if (DENY_KEYS.has(k)) continue;
     if (typeof v === "function" || typeof v === "symbol") continue;
+    // Drop inline images and other oversized strings rather than failing the sync.
+    if (typeof v === "string" && (v.startsWith("data:") || v.length > MAX_STRING_BYTES)) continue;
     out[k] = v;
+  }
+  if (JSON.stringify(out).length > MAX_SETTINGS_BYTES) {
+    throw new Error("Your settings are too large to sync across devices.");
   }
   return out;
 }
