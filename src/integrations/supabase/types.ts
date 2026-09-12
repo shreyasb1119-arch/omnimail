@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      google_sessions: {
+        Row: {
+          created_at: string
+          email: string | null
+          google_sub: string
+          last_used_at: string
+          refresh_token: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          google_sub: string
+          last_used_at?: string
+          refresh_token: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          google_sub?: string
+          last_used_at?: string
+          refresh_token?: string
+          token_hash?: string
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           email: string | null
