@@ -1,4 +1,4 @@
-import { settingsStore } from "./store";
+import { settingsStore, sessionStore } from "./store";
 import { lovableAiChat } from "./ai.functions";
 
 const BASE_RULES = `You are Omni Mail's email intelligence engine.
@@ -63,14 +63,19 @@ export async function aiChat(prompt: string, userSystem = ""): Promise<string> {
       },
     );
     if (!r.ok) {
-      const t = await r.text().catch(() => "");
-      throw new Error(`Gemini ${r.status}: ${t}`);
+      throw new Error(
+        r.status === 400 || r.status === 403
+          ? "Your Gemini key was rejected. Check it in Settings."
+          : "Gemini request failed. Please try again.",
+      );
     }
     const j = (await r.json()) as any;
     return (j.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") ?? "").trim();
   }
-  // Fallback: Lovable AI Gateway via server function
-  const res = await lovableAiChat({ data: { prompt, system } });
+  // Fallback: Lovable AI Gateway via server function (requires a signed-in caller)
+  const sess = sessionStore.get();
+  if (!sess?.accessToken) throw new Error("Sign in to use Omni Mail's AI features.");
+  const res = await lovableAiChat({ data: { prompt, system, accessToken: sess.accessToken } });
   return (res.text || "").trim();
 }
 
