@@ -2,31 +2,58 @@ import { createServerFn } from "@tanstack/react-start";
 
 /**
  * Cross-device settings sync.
- * The caller proves identity with their Google access token, which we verify
- * against Google's tokeninfo/userinfo endpoint before touching any row.
+ * The caller proves identity with a Google access token that must have been
+ * issued to this app; only then do we touch a row.
  */
-async function identify(accessToken: string) {
-  if (!accessToken || accessToken.length < 20) throw new Error("Unauthorized");
-  const r = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!r.ok) throw new Error("Unauthorized");
-  const p = (await r.json()) as { sub?: string; email?: string };
-  if (!p.sub) throw new Error("Unauthorized");
-  return { sub: p.sub, email: p.email ?? null };
+
+const MAX_SETTINGS_BYTES = 256 * 1024;
+
+/** Credential-shaped fields must never be persisted, even if a client sends them. */
+const DENY_KEYS = new Set([
+  "clientId",
+  "geminiKey",
+  "accessToken",
+  "refreshToken",
+  "idToken",
+  "apiKey",
+  "password",
+  "secret",
+]);
+
+function sanitize(raw: string): Record<string, unknown> {
+  if (raw.length > MAX_SETTINGS_BYTES) throw new Error("Settings payload too large");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("Invalid settings payload");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Invalid settings payload");
+  }
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+    if (DENY_KEYS.has(k)) continue;
+    if (typeof v === "function" || typeof v === "symbol") continue;
+    out[k] = v;
+  }
+  return out;
 }
 
 export const pullSettings = createServerFn({ method: "POST" })
   .inputValidator((d: { accessToken: string }) => d)
   .handler(async ({ data }) => {
-    const { sub } = await identify(data.accessToken);
+    const { verifyGoogleCaller, rateLimit } = await import("./auth.server");
+    const { sub } = await verifyGoogleCaller(data.accessToken);
+    rateLimit(`pull:${sub}`, 60, 60_000);
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row, error } = await supabaseAdmin
       .from("user_settings")
       .select("settings, updated_at")
       .eq("google_sub", sub)
       .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error("Could not load your synced settings.");
     return {
       settingsJson: row?.settings ? JSON.stringify(row.settings) : null,
       updatedAt: row?.updated_at ?? null,
@@ -34,15 +61,23 @@ export const pullSettings = createServerFn({ method: "POST" })
   });
 
 export const pushSettings = createServerFn({ method: "POST" })
-  .inputValidator((d: { accessToken: string; settingsJson: string }) => d)
+  .inputValidator((d: { accessToken: string; settingsJson: string }) => {
+    if (typeof d?.settingsJson !== "string") throw new Error("Invalid settings payload");
+    return d;
+  })
   .handler(async ({ data }) => {
-    const { sub, email } = await identify(data.accessToken);
+    const { verifyGoogleCaller, rateLimit } = await import("./auth.server");
+    const { sub, email } = await verifyGoogleCaller(data.accessToken);
+    rateLimit(`push:${sub}`, 60, 60_000);
+
+    const settings = sanitize(data.settingsJson);
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const updatedAt = new Date().toISOString();
     const { error } = await supabaseAdmin.from("user_settings").upsert(
-      { google_sub: sub, email, settings: JSON.parse(data.settingsJson) as never, updated_at: updatedAt },
+      { google_sub: sub, email, settings: settings as never, updated_at: updatedAt },
       { onConflict: "google_sub" },
     );
-    if (error) throw new Error(error.message);
+    if (error) throw new Error("Could not save your settings.");
     return { updatedAt };
   });
