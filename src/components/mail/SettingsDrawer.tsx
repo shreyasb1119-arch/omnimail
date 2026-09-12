@@ -105,7 +105,24 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
             </div>
             <div className="flex gap-2">
               <Button onClick={save}>Save</Button>
-              <Button variant="ghost" onClick={() => signOut()}>Sign out</Button>
+            </div>
+            <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-3">
+              <div className="text-xs font-medium text-foreground">Sign out of Omni Mail</div>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Disconnects this device from your Google account. Your synced preferences stay saved.
+              </p>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="mt-2 w-full"
+                onClick={() => {
+                  onOpenChange(false);
+                  signOut();
+                  toast.success("Signed out");
+                }}
+              >
+                Sign out
+              </Button>
             </div>
           </section>
           <Separator />
