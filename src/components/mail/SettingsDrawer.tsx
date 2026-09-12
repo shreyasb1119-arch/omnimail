@@ -100,9 +100,25 @@ export function SettingsDrawer({ open, onOpenChange }: { open: boolean; onOpenCh
                 onChange={(e) => setGeminiKey(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                With a key, requests go straight to <b>Gemini 3.6 Flash</b>. Leave empty to use built-in AI.
+                With a key, requests go straight to <b>Gemini 3.6 Flash</b>. Leave empty to use built-in AI —
+                that's the safer default, since a key you paste here is stored on this device only and is
+                never synced or sent to Omni Mail's servers.
               </p>
+              {geminiKey.trim() ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setGeminiKey("");
+                    settingsStore.set({ geminiKey: "" });
+                    toast.success("Gemini key removed from this device");
+                  }}
+                >
+                  Forget this key
+                </Button>
+              ) : null}
             </div>
+
             <div className="flex gap-2">
               <Button onClick={save}>Save</Button>
             </div>
