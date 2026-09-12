@@ -5,6 +5,13 @@ import { pullSettings, pushSettings } from "./sync.functions";
 /** Never leave the device: private keys stay local. */
 const LOCAL_ONLY: (keyof Settings)[] = ["clientId", "geminiKey"];
 
+/**
+ * Uploaded images are stored inline as data URLs and can run to megabytes.
+ * They stay on the device that uploaded them; only picked/linked images sync.
+ */
+const IMAGE_FIELDS: (keyof Settings)[] = ["wallpaperUrl", "avatarUrl"];
+const MAX_SYNCED_STRING = 8 * 1024;
+
 export type SyncState = { status: "off" | "syncing" | "synced" | "error"; lastSync: number | null; message?: string };
 
 let state: SyncState = { status: "off", lastSync: null };
@@ -28,6 +35,12 @@ export function useSyncState() {
 function syncable(s: Settings) {
   const out: Record<string, unknown> = { ...s };
   LOCAL_ONLY.forEach((k) => delete out[k as string]);
+  IMAGE_FIELDS.forEach((k) => {
+    const v = out[k as string];
+    if (typeof v === "string" && (v.startsWith("data:") || v.length > MAX_SYNCED_STRING)) {
+      delete out[k as string];
+    }
+  });
   return out;
 }
 
