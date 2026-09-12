@@ -33,7 +33,7 @@ import {
 } from "@/lib/gmail";
 import { startSettingsSync } from "@/lib/sync";
 import { snooze, SNOOZE_PRESETS, SNOOZE_LABEL, useSnoozed, startSnoozeWatcher } from "@/lib/snooze";
-import { signIn, refreshSilently, loadGis } from "@/lib/gauth";
+import { signIn, refreshSilently, loadGis, hasPersistentSession } from "@/lib/gauth";
 import { useSession, useSettings, sessionStore, settingsStore, getAiLabels, setAiLabel, type AiLabel, type SortBy, type LayoutId } from "@/lib/store";
 import { aiTriage, aiTriageBatch, aiSummarize, aiSmartReplies, aiDigest, aiExtractTasks, aiFollowUpRadar, aiUnsubscribeScout, aiPrioritySort, aiTranslate, aiToneRead, aiMeetingExtract, aiAttachmentBrief, aiSecurityCheck, aiSenderBrief, aiCleanupPlan, aiNaturalSearch, looksNaturalLanguage, aiReplyDraft, aiVipScan, aiInboxReport,
   aiCommitments, aiSpendScan, aiTravelBoard, aiDeadlineBoard, aiRelationshipPulse, aiSmartFolders,
@@ -213,7 +213,7 @@ function App() {
     (async () => {
       if (session) return;
       const raw = localStorage.getItem("shreyas-mail:session");
-      if (!raw || !settings.clientId) return;
+      if (!raw && !hasPersistentSession()) return;
       await loadGis();
       const r = await refreshSilently();
       if (!r) sessionStore.replace(null);
@@ -223,7 +223,7 @@ function App() {
 
   // Stay signed in "forever": proactive silent refresh + refresh on tab focus.
   useEffect(() => {
-    if (!session || !settings.clientId) return;
+    if (!session) return;
     const renew = async () => {
       const s = sessionStore.get();
       if (!s) return;
