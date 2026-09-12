@@ -3,7 +3,21 @@
  * and keep abusive traffic off the AI gateway.
  */
 
-type TokenInfo = { sub?: string; aud?: string; email?: string; expires_in?: string };
+type TokenInfo = {
+  sub?: string;
+  aud?: string;
+  azp?: string;
+  email?: string;
+  expires_in?: string;
+};
+
+export class SessionExpiredError extends Error {
+  constructor() {
+    super("Your Google session expired. Sign out and sign in again.");
+    this.name = "SessionExpiredError";
+  }
+}
+
 
 /**
  * Verifies a Google OAuth access token AND that it was issued to this app.
